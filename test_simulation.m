@@ -1,4 +1,4 @@
-number=50;
+number=20;
 r=linspace(0.01,0.99,number); % avoid 0 and 1 as these can give Inf in beta distribution
 v=linspace(-4,log(1/2),number);
 k=exp(linspace(-4,1,number));
