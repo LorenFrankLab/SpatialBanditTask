@@ -1,29 +1,9 @@
-function lik=loglikelihood(q_stem,q_leaf,choice_stem,choice_leaf,bias,beta_stem,beta_leaf)
+function lik=loglikelihood(q_stem,q_leaf,choice_stem,choice_leaf,bias,beta_go,beta_stay,beta_leaf)
 % q is a matrix of values of size (# of choices) x (trial number)
 % choice are the choices animal make
 % assuming animals make choices based on exp(q(t))/sum(exp(q))
-lik=0;
-if nargin<3
-    bias=0;
-end
 
-prev_stem=NaN;
-for t=1:length(choice_stem)
-    if t>1
-        q_=beta_stem.*q_stem(:,t);
-        q_(choice_stem(t-1))=q_(choice_stem(t-1))+bias;
-    else
-        q_=q_stem(:,1);
-    end
-
-    lik=lik+q_(choice_stem(t))-logsumexp(q_);
-    if (prev_stem ~= choice_stem(t))
-        %log likelihood of leaf choice on switches only
-        lik = lik + beta_leaf * q_leaf(choice_leaf(t),t) - logsumexp(beta_leaf * q_leaf(:,t));
-    end
-    
-    prev_stem=choice_stem(t);
-end
+[q_stem_modified,q_leaf_modified,lik]=modify_q(q_stem,q_leaf,choice_stem,choice_leaf,bias,beta_go,beta_stay,beta_leaf);
 
 end
 

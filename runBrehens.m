@@ -9,7 +9,9 @@ contingency=T.contingency;
 
 %% Tim Brehens 2007
 number=20;
-r=linspace(0.01,0.99,number); % avoid 0 and 1 as these can give Inf in beta distribution
+r=linspace(0,1,number); % avoid 0 and 1 as these can give Inf in beta distribution
+r=r+r(2)-r(1);
+r=r(1:end-1);
 v=log(linspace(exp(-4),1/2,number));
 k=linspace(0.01,1/2,10);
 
@@ -67,6 +69,7 @@ leaf_choice=T.leaf;
     
 boundary=find(diff([0;session]));
 lik=[];
+r_pred_modified_all=[];
 params=[];
 boundaries=[];
 for b=find(boundary>=min(trials_to_try),1):find(boundary<=max(trials_to_try),1,'last')
@@ -78,13 +81,15 @@ for b=find(boundary>=min(trials_to_try),1):find(boundary<=max(trials_to_try),1,'
     Q_leaf=r_pred_all(4:9,(session_begin-trials_to_try(1)+1):(session_end-trials_to_try(1)+1));
     Q_stem=r_pred_all(1:3,(session_begin-trials_to_try(1)+1):(session_end-trials_to_try(1)+1));
     
-    [lik_,bias,beta_stem,beta_leaf]=loglikelihood_beta(Q_stem,Q_leaf,stem_choices,leaf_choices);
+    [lik,bias,beta_stem,beta_leaf,q_stem_modified,q_leaf_modified]=loglikelihood_beta(Q_stem,Q_leaf,stem_choices,leaf_choices);
     lik=[lik,lik_];
     params=[params;[bias,beta_stem,beta_leaf]];
     boundaries=[boundaries,boundary(b)];
+    r_pred_modified=[q_leaf_modified;q_stem_modified];
+    r_pred_modified_all=[r_pred_modified_all,r_pred_modified];
 end
 
 %% save matfile
 if ~isempty(filepath_result)
-    save(filepath_result,'alphas','betas','lr_all','r_pred_all','r_hat_all','lik','params','boundaries','filepath_csv','trials_to_try','r','v','k','-v7.3')
+    save(filepath_result,'alphas','betas','lr_all','r_pred_all','r_hat_all','r_pred_modified_all','lik','params','boundaries','filepath_csv','trials_to_try','r','v','k','-v7.3')
 end

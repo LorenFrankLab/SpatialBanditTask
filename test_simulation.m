@@ -1,7 +1,8 @@
-number=20;
-r=linspace(0.01,0.99,number); % avoid 0 and 1 as these can give Inf in beta distribution
-v=linspace(-4,log(1/2),number);
-k=exp(linspace(-4,1,number));
+r_number=100;
+v_number=20;
+r=linspace(0,1,r_number); % avoid 0 and 1 as these can give Inf in beta distribution
+v=linspace(-8,log(0.5),v_number);
+k=1;
 y=[0,1];
 
 number=length(r);
@@ -15,9 +16,9 @@ p_r_emission=@(y,r_i1) binopdf(y,1,r_i1);%/sum(binopdf(y,1,r));
 %% make ground truth data
 k_gt=1;
 v_gt=zeros(100,1);
-v_gt(1)=-1;
+v_gt(1)=-2;
 r_gt=zeros(100,1);
-r_gt(1)=-1;
+r_gt(1)=0.8;
 y_gt=zeros(100,1);
 y_gt(1)=1;
 for t=2:100
@@ -45,19 +46,71 @@ end
 
 %% run the model
 version=1;
-[alpha,beta]=BrehensModel(zeros(1,100)+1,y_gt,k,r,v,version);
+obs=zeros(1,100);
+obs(1:30)=1;
+obs(80:90)=1;
+[alpha,beta]=BrehensModel(obs,y_gt,k,r,v,version);
 %% plot result
-r_hat=sum(r*squeeze(sum(sum(alpha(:,:,:,1:100),3),2)),1);
-v_hat=sum(v*squeeze(sum(sum(alpha(:,:,:,1:100),3),1)),1);
-k_hat=sum(k*squeeze(sum(sum(alpha(:,:,:,1:100),2),1)),1);
+p_r=squeeze(sum(sum(alpha(:,:,:,1:100),3),2));
+r_hat=sum(r*p_r,1);
+p_v=squeeze(sum(sum(alpha(:,:,:,1:100),3),1));
+v_hat=sum(exp(v)*p_v,1);
+p_k=squeeze(sum(sum(alpha(:,:,:,1:100),2),1));
+k_hat=sum(k*p_k,1);
+
+r_std=sqrt(sum(((repmat(r',1,100)-repmat(r_hat,r_number,1)).^2).*p_r,1));
+v_std=sqrt(sum(((repmat(exp(v)',1,100)-repmat(v_hat,v_number,1)).^2).*p_v,1));
+%k_std=sqrt(sum(((repmat(k',1,100)-repmat(k_hat,50,1)).^2).*p_k,1));
+
+[r_std_x,r_std_y]=plot_std(r_hat(2:end),r_std(2:end));
+[v_std_x,v_std_y]=plot_std(v_hat(2:end),v_std(2:end));
+%[k_std_x,k_std_y]=plot_std(k_hat(2:end),k_std(2:end));
+
 figure;
+subplot(2,1,1)
+imagesc(p_v)
+title('p(v)')
+subplot(2,1,2)
 plot(r_hat(2:end),'color',[0.8,0.05,0.05]);
 hold on;
+%fill(r_std_x,r_std_y,[0.8,0.05,0.05],'EdgeColor','None','FaceAlpha',0.1)
 plot(r_gt(2:end),'color',[1,0.5,0.5]);
-plot(exp(v_hat(2:end)),'color',[0.05,0.05,0.8]);
+
+plot(v_hat(2:end),'color',[0.05,0.05,0.8]);
+%fill(v_std_x,v_std_y,[0.05,0.05,0.8],'EdgeColor','None','FaceAlpha',0.1)
 plot(exp(v_gt(2:end)),'color',[0.5,0.5,1])
-plot(k_hat(2:end)','color',[0.05,0.8,0.05]);
-plot(1:length(k_hat(2:end)),zeros(1,length(k_hat(2:end)))+k_gt,'color',[0.5,1,0.5])
-legend('mean(r), est','r gt','mean(V), est','V gt','mean(K), est','K gt')
+
+%plot(k_hat(2:end)','color',[0.05,0.8,0.05]);
+%fill(k_std_x,k_std_y,[0.05,0.8,0.05],'EdgeColor','None','FaceAlpha',0.1)
+%plot(1:length(k_hat(2:end)),zeros(1,length(k_hat(2:end)))+k_gt,'color',[0.5,1,0.5])
+
+y_gt(obs==0)=NaN;
+plot(y_gt,'*')
+legend('mean(r), est','r gt','mean(V), est','V gt','reward')
 xlabel('trial')
 ylabel('a.u.')
+%%
+time1=29;%20;
+time2=30;%40;
+time3=50;
+times=[time1,time2,time3];
+
+figure;
+for t=1:length(times)
+p_rv=squeeze(sum(alpha(:,:,:,times(t)),3));
+%p_vk=squeeze(sum(alpha(:,:,:,times(t)),1));
+
+subplot(length(times),1,t)%*2-1)
+imagesc(p_rv);
+xlabel('v')
+ylabel('r')
+title(['time',num2str(times(t))])
+hold on
+
+% subplot(length(times),2,t*2)
+% p_v_=sum(p_rv,1);
+% plot(p_v_)
+% mean_=sum(p_v_.*exp(v));
+% var_=sqrt(sum((exp(v)-mean_).^2.*p_v_)');
+% title(num2str(var_))
+end

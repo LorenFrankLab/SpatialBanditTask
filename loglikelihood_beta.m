@@ -1,4 +1,4 @@
-function [lik,bias,beta_stem,beta_leaf]=loglikelihood_beta(q_stem,q_leaf,choice_stem,choice_leaf)
+function [lik,bias,beta_stem,beta_leaf,q_stem_modified,q_leaf_modified]=loglikelihood_beta(q_stem,q_leaf,choice_stem,choice_leaf)
 
 %helper=@(beta) -loglikelihood(beta.*q,choice);
 
@@ -18,6 +18,6 @@ bias=params(1);
 beta_stem=params(2);
 beta_leaf=params(3);
 
-%lik=loglikelihood(q_stem,q_leaf,choice_stem,choice_leaf,bias,beta_stem,beta_leaf);
+[q_stem_modified,q_leaf_modified,lik]=loglikelihood(q_stem,q_leaf,choice_stem,choice_leaf,bias,beta_stem,beta_leaf);
 
 end

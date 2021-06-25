@@ -4,13 +4,13 @@ csv_folder='/home/shijiegu/Documents/SpatialBanditTask';
 result_folder='/home/shijiegu/Documents/SpatialBanditTask/result_Jun172021/trial_5734_6900/';
 
 csv_files={};
-csv_files{1}='senor_clean_contingencies_only_parsed_depletion_data.csv';
-csv_files{2}='senor_clean_contingencies_only_parsed_data.csv';
+csv_files{2}='senor_clean_contingencies_only_parsed_depletion_data.csv';
+csv_files{1}='senor_clean_contingencies_only_parsed_data.csv';
 
-trials_to_try=5734:6900;
-for vi=1:4
+trials_to_try=5734:5834;%6900;
+for vi=1%:4
     model_version=vi;
-for d=1:numel(csv_files)
+for d=1%:numel(csv_files)
     csv_file=csv_files{d};
     result_file=csv_file;
     result_file(end-2:end)='mat';

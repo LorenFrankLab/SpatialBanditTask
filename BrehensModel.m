@@ -6,6 +6,7 @@ end
 trials_to_try=length(observations);
 number=length(r);
 knumber=length(k);
+vnumber=length(v);
 dr=r(2)-r(1);
 dv=v(2)-v(1);
 %% define transition models and emission models
@@ -15,15 +16,15 @@ p_r_emission=@(y,r_i1) binopdf(y,1,r_i1)/sum(binopdf(y,1,r));
 
 %% initialize
 
-alpha=zeros(number,number,knumber,trials_to_try);
+alpha=zeros(number,vnumber,knumber,trials_to_try);
 alpha(:,:,:,1)=1;
 alpha(:,:,:,1)=alpha(:,:,:,1)./sum(sum(alpha(:,:,:,1)));
 
-beta=zeros(number,number,knumber,trials_to_try); %one step transition for r
+beta=zeros(number,vnumber,knumber,trials_to_try); %one step transition for r
 
-beta_r_tmp=zeros(number,number,number,knumber,trials_to_try)+0.5;
-beta_v=zeros(number,number,knumber,trials_to_try); %one step transition for v
-beta_v_tmp=zeros(number,number,number,knumber,trials_to_try);
+beta_r_tmp=zeros(number,number,vnumber,knumber,trials_to_try)+0.5;
+beta_v=zeros(number,vnumber,knumber,trials_to_try); %one step transition for v
+beta_v_tmp=zeros(number,vnumber,vnumber,knumber,trials_to_try);
 
 if ~isempty(full_observations)
     cum_stem_num=0;
@@ -33,6 +34,9 @@ end
 %% iteratively predict, observe, and update
 for t=1:trials_to_try
    disp(t)  
+   if t==40
+       disp('here')
+   end
    alpha(:,:,:,t)= alpha(:,:,:,max([t-1,1]));
    
 %    if ~observations(t)
@@ -47,8 +51,8 @@ for t=1:trials_to_try
    % get one step transition prediction for v
    for k_index=1:knumber
        ki=k(k_index);
-       for v_index=1:number
-           for v_i1_index=1:number
+       for v_index=1:vnumber
+           for v_i1_index=1:vnumber
                vi=v(v_index);
                v_i1=v(v_i1_index);
                beta_v_tmp(:,v_index,v_i1_index,k_index,t)=alpha(:,v_index,k_index,t)*p_v_transition(vi,v_i1,ki);
@@ -58,16 +62,21 @@ for t=1:trials_to_try
    beta_v(:,:,:,t)=squeeze(sum(beta_v_tmp(:,:,:,:,t),2));
    
    % get one step transition prediction for r
-   for v_index=1:number
+   for v_index=1:vnumber
        v_i1=v(v_index);
        for r_index=1:number
-       for r_i1_index=1:number
            ri=r(r_index);
+           if version==1
+               [p_r_tmp,a,b]=p_r_transition(r,ri,exp(v_i1),dr,r);
+           end
+       for r_i1_index=1:number
+           
            r_i1=r(r_i1_index);
            if version==1
-               [p_r,a,b]=p_r_transition(r_i1,ri,exp(v_i1),dr,r);
+               %[p_r,a,b]=p_r_transition(r_i1,ri,exp(v_i1),dr,r);
+               p_r=p_r_tmp(r_i1_index);
            elseif version==2
-               p_r=p_r_transition_version2(r_i1,ri,exp(v_i1),dr,r);
+               p_r=p_r_transition_version2(r_i1_index,r_index,exp(v_i1),r);
            elseif and(version==3,~isempty(full_observations)) % observer with memory for stem/leaf visit
                if and(and(full_observations(t)==prev_stem(t),prev_stem(t)==1),full_observations(t)==1)
                    cum_stem_num=1;

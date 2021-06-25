@@ -87,6 +87,7 @@ if strcmp(model_type,'q')
     
     boundary=find(diff([0;session]));
     lik=[];
+    r_pred_modified_all=[];
     for b=1:length(boundary)
         if and(boundary(b)>=min(trials_to_try),boundary(b)<=max(trials_to_try))
             session_begin=boundary(b);
@@ -97,10 +98,15 @@ if strcmp(model_type,'q')
             Q_leaf=r_pred_all(4:9,session_begin:session_end);
             Q_stem=r_pred_all(1:3,session_begin:session_end);
             
-            lik=[lik,loglikelihood_beta(Q_stem,Q_leaf,stem_choices,leaf_choices)];
+            [lik_,bias,beta_stem,beta_leaf,q_stem_modified,q_leaf_modified]=...
+                loglikelihood_beta(Q_stem,Q_leaf,stem_choices,leaf_choices);
+            lik=[lik,lik_];
+            r_pred_modified=[q_leaf_modified;q_stem_modified];
+            r_pred_modified_all=[r_pred_modified_all,r_pred_modified];
         end
     end
-
+else
+    
 end
 %%
 page_num=ceil(length(trials_to_try)/300);
@@ -126,6 +132,7 @@ for o_index=1:3
     
     r_hat=r_hat_all(o_index,trial_start_index:trial_end_index);
     r_pred=r_pred_all(o_index,trial_start_index:trial_end_index);
+    r_pred_modified=r_pred_modified_all(o_index,trial_start_index:trial_end_index);
      
     rewarded=double(observations(:,2)>0);
     rewarded(rewarded==0)=nan;
@@ -133,7 +140,7 @@ for o_index=1:3
     unrewarded(unrewarded==0)=nan;
     observations((observations(:,1)==0),1)=nan;
     
-    plot(r_hat,'color',c1,'LineWidth',1)
+    plot(r_pred_modified,'color',c1,'LineWidth',1)
     hold on
     plot(r_pred,'color',[c1,0.35],'LineWidth',2)
     rewarded_choice=r_hat.*observations(:,1)'.*rewarded';
