@@ -22,4 +22,5 @@ This model follows the POMDP narrative, infering the distribution over the state
 
 Behavior data are in the **data** folder.
 Results from the code are saved in various folders.
+
 -----
