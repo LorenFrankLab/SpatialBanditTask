@@ -16,6 +16,8 @@ This model follows the POMDP narrative, infering the distribution over the state
 
 **Relevent code files**: `hmm_model.m` (Estimate distribution, saves calculated point estimate and uncertainty/Shannon entropy),`plot_hmm.m`
 
+_The depletion version needs more charaterization (plot examples etc.)._
+
 ### 3. Comparing Q and HMM:
 
 **Relevent code files**:
