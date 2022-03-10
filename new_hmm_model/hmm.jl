@@ -252,8 +252,8 @@ function hmm_lik(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatia
                 elseif (prevs == 2)
                     Qstem[3] += turn_bias
                     # Qeff[3] .+= turn_bias
-                    Qstem[1] += spatial_bias[2]
-                    # Qeff[1] .+= spatial_bias[2]
+                    Qstem[3] += spatial_bias[2]
+                    # Qeff[3] .+= spatial_bias[2]
                 elseif (prevs == 3)
                     Qstem[1] += turn_bias
                     # Qeff[1] .+= turn_bias
@@ -404,8 +404,8 @@ function hmm_Q(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatial_
                 elseif (prevs == 2)
                     Qstem[3] += turn_bias
                     # Qeff[3] .+= turn_bias
-                    Qstem[1] += spatial_bias[2]
-                    # Qeff[1] .+= spatial_bias[2]
+                    Qstem[3] += spatial_bias[2]
+                    # Qeff[3] .+= spatial_bias[2]
                 elseif (prevs == 3)
                     Qstem[1] += turn_bias
                     # Qeff[1] .+= turn_bias
