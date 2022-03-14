@@ -532,19 +532,6 @@ function hmm_lik_stay_turn_observed_fn(params, data)
     return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
 end
 
-function hmm_lik_stay_stem_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = params[4]
-    turn_bias = 0.0
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[8] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
-end
-
 function hmm_lik_stay_spatial_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
