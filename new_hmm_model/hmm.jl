@@ -180,7 +180,7 @@ function get_contingencies_base()
         )')
 end
 
-function hmm_lik(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}) where U
+function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}, add_leaf) where U
     nstates = size(ϕ, 1)
 
     statePrior = ones(U,nstates) * 1/nstates
@@ -212,7 +212,6 @@ function hmm_lik(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatia
         for session in unique(d_sessions)
             # Subset of trials for the session/date
             t_ind = findall((dates .== date) .& (sessions .== session))
-            ntrials::Int = length(t_ind)   
             # α is the joint probability of all observations, and the state at time t
             # For predictive purposes, α at time t is prior to the outcome information for trial t            
 
@@ -294,7 +293,7 @@ function hmm_lik(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatia
                     lik += Qstem[3] - logsumexp(Qstem)
                 end
                 # Leaf choice
-                if (prevs != stemchoice[t])
+                if (add_leaf && (prevs != stemchoice[t]))
                     # log likelihood of leaf choice on switches only (meaningless for stay)
                     lik += βleaf * Q[stemchoice[t]][leafchoice[t]]
                     lik -= logsumexp(βleaf .* Q[stemchoice[t]]);
@@ -326,7 +325,7 @@ Returns:
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
     Qstem: Stem Q-values at each trial, including biases
 """
-function hmm_Q(df, βgo::U, βstay::U, βleaf::U, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}) where U
+function hmm_Q(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}, add_leaf) where U
     nstates = size(ϕ, 1)
 
     statePrior = ones(U,nstates) * 1/nstates
@@ -484,16 +483,81 @@ function hmm_lik_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
     βstay = params[2] # beta for current stem
+    βleaf = 0.0 # beta for leaf choice on switch
+    stay_bias = 0.0
+    turn_bias = 0.0
+    spatial_bias = [0.0, 0.0, 0.0]
+    volatility = 0.1 + 0.1 * erf(params[3] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+    ϕ = get_contingencies()
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
+end
+
+function hmm_lik_stay_fn(params, data)
+    # these are the free parameters
+    βgo = params[1]   # beta for switch to alternative stem 
+    βstay = params[2] # beta for current stem
+    βleaf = 0.0 # beta for leaf choice on switch
+    stay_bias = params[3]
+    turn_bias = 0.0
+    spatial_bias = [0.0, 0.0, 0.0]
+    volatility = 0.1 + 0.1 * erf(params[4] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+    ϕ = get_contingencies()
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
+end
+
+function hmm_lik_stay_turn_fn(params, data)
+    # these are the free parameters
+    βgo = params[1]   # beta for switch to alternative stem 
+    βstay = params[2] # beta for current stem
+    βleaf = 0.0 # beta for leaf choice on switch
+    stay_bias = params[3]
+    turn_bias = params[4]
+    spatial_bias = [0.0, 0.0, 0.0]
+    volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+    ϕ = get_contingencies()
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
+end
+
+function hmm_lik_stay_turn_observed_fn(params, data)
+    # these are the free parameters
+    βgo = params[1]   # beta for switch to alternative stem 
+    βstay = params[2] # beta for current stem
+    βleaf = 0.0 # beta for leaf choice on switch
+    stay_bias = params[3]
+    turn_bias = params[4]
+    spatial_bias = [0.0, 0.0, 0.0]
+    volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+    ϕ = get_contingencies_observed()
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
+end
+
+function hmm_lik_stay_spatial_fn(params, data)
+    # these are the free parameters
+    βgo = params[1]   # beta for switch to alternative stem 
+    βstay = params[2] # beta for current stem
+    βleaf = 0.0 # beta for leaf choice on switch
+    stay_bias = params[3]
+    turn_bias = 0.0
+    spatial_bias = params[4:6]
+    volatility = 0.1 + 0.1 * erf(params[7] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+    ϕ = get_contingencies()
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
+end
+
+function hmm_lik_leaf_fn(params, data)
+    # these are the free parameters
+    βgo = params[1]   # beta for switch to alternative stem 
+    βstay = params[2] # beta for current stem
     βleaf = params[3] # beta for leaf choice on switch
     stay_bias = 0.0
     turn_bias = 0.0
     spatial_bias = [0.0, 0.0, 0.0]
     volatility = 0.1 + 0.1 * erf(params[4] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
     ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
 end
 
-function hmm_lik_stay_fn(params, data)
+function hmm_lik_leaf_stay_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
     βstay = params[2] # beta for current stem
@@ -503,10 +567,10 @@ function hmm_lik_stay_fn(params, data)
     spatial_bias = [0.0, 0.0, 0.0]
     volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
     ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
 end
 
-function hmm_lik_stay_turn_fn(params, data)
+function hmm_lik_leaf_stay_turn_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
     βstay = params[2] # beta for current stem
@@ -516,10 +580,10 @@ function hmm_lik_stay_turn_fn(params, data)
     spatial_bias = [0.0, 0.0, 0.0]
     volatility = 0.1 + 0.1 * erf(params[6] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
     ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
 end
 
-function hmm_lik_stay_turn_observed_fn(params, data)
+function hmm_lik_leaf_stay_turn_observed_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
     βstay = params[2] # beta for current stem
@@ -529,10 +593,10 @@ function hmm_lik_stay_turn_observed_fn(params, data)
     spatial_bias = [0.0, 0.0, 0.0]
     volatility = 0.1 + 0.1 * erf(params[6] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
     ϕ = get_contingencies_observed()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
 end
 
-function hmm_lik_stay_spatial_fn(params, data)
+function hmm_lik_leaf_stay_spatial_fn(params, data)
     # these are the free parameters
     βgo = params[1]   # beta for switch to alternative stem 
     βstay = params[2] # beta for current stem
@@ -542,7 +606,7 @@ function hmm_lik_stay_spatial_fn(params, data)
     spatial_bias = params[5:7]
     volatility = 0.1 + 0.1 * erf(params[8] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
     ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ)
+    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
 end
 
 function run_hmm_em(animal; maxiter=100)
