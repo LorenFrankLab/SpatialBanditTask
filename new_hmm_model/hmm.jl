@@ -301,7 +301,7 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
             # Initial α state
             # We're resetting this to the prior for each session
             # α(z_1k) = π_k p(x_1 | ϕ_k)
-            α .= (retain_belief .* α) .- ((1 - retain_belief) .* statePrior)
+            α .= (retain_belief .* α) .+ ((1 - retain_belief) .* statePrior)
             prevs::Int = 0
             prevl::Int = 0
             # If rewarded, then emission = reward probs, otherwise 1 - reward probs
