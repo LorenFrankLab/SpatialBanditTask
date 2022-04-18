@@ -46,17 +46,17 @@ function cont_combination_old(s)
     parse.(Int, split(s, "0"; keepempty=false)) ./ 10
 end
 
-function load_animal(animal)
+function load_animal(animal; depletion=false)
     filepath = "/Users/ari/Dropbox/Princeton/SpatialBanditTask"
     
     # csv_file to estimate value for
-    # if depletion_flag
-        # csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
+    if depletion
+        csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
         # mkdir(fullfile(filepath,["hmm_decay_",animal]))
-    # else
-    csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
+    else
+        csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
         # mkdir(fullfile(filepath,['hmm_',animal]))
-    # end
+    end
     fullpath = joinpath(filepath, "data", csv_file)
     df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
 
@@ -73,6 +73,22 @@ function load_animal(animal)
     datesessions = string.(df.date) .* string.(df.session)
     uniq_datesessions = unique(datesessions)
     df.daysessionnum = [minimum(findall(datesessions[i] .== uniq_datesessions)) for i in 1:nrow(df)]
+
+    # Stem switches
+    df[!, :stemswitch] .= false
+    prevstem = 0
+    prevsession = 0
+    for i in 1:size(df, 1)
+        session = df[i, :session]
+        if (session == prevsession)
+            stem = df[i, :stem]
+            if (stem != prevstem)
+                df[i, :stemswitch] = true
+            end
+            prevstem = stem
+        end
+        prevsession = session
+    end
 
     df.cont_combo = cont_combination_old.(string.(df.contingency))
     df.contingency = string.(df.contingency)
@@ -205,8 +221,39 @@ function get_contingencies_base()
         )')
 end
 
-function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}, add_leaf) where U
+import Base.length
+length(df::U) where U <: DataFrame = size(df, 1)
+
+"""
+hmm_lik
+
+HMM Likelihood function
+
+βgo<float>: Scaling for alternate stems
+βstay<float>: Scaling for current stem
+βleaf<float>: Beta weight for leaf choice softmax
+turn_bias<float>: Offset added to (leftward?) choice
+spatial_bias<[float, float, float]>: Per-stem offset added to (leftward?) choice
+leaf_turn_bias<float>: Offset added to 'first' leaf on entering a new stem
+leaf_spatial_bias<[float, float, float]>: Per-stem leaf turn bias
+volatility<float>: Assumed chance of a switch
+γ2<float>: Discount on timestep 2 for other leaf
+depletion_factor<float>: Fraction of value retained when remaining at the same leaf for multiple trials
+ϕ: nstates x 6 emission probabilities
+add_leaf<bool>: Whether to include likelihood for the leaf choice on a stem switch
+record<bool>: Whether to return a record of estimated Q-values and entropy measures
+
+Returns:
+    negative likelihood
+If 'return':
+    Q: Inferred leaf Q-values at the start of each trial, ignoring biases
+    Qstem: Stem Q-values at each trial, including biases
+    state_entropy
+    reward_entropy
+"""
+function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, volatility, γ2, depletion_factor, retain_belief, ϕ::Array{Float64, 2}, add_leaf, record::Bool) where U
     nstates = size(ϕ, 1)
+    ntrials = length(df)
 
     statePrior = ones(U,nstates) * 1/nstates
 
@@ -217,12 +264,22 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     lik::U = 0.
 
     α = zeros(U, nstates)
+    αtemp = zeros(U, nstates)
     # Really a 3x2 matrix, split up here for speed
     Q = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
     # Qeff = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
     Qstem = zeros(U, 3)
     Qtemp = zeros(U, 6)
     ϕT = ϕ'
+    if record
+        Q_record = zeros(ntrials, 6)
+        Qstem_record = zeros(ntrials, 3)
+        state_entropy = zeros(ntrials)
+        reward_entropy = zeros(ntrials)
+    end
+    i = 1
+
+    depletion = ones(U, 6)
 
     # (dates, sessions, leaf, leafchoice, stemchoice, reward) = hmm_lik_extract_df(df)
     dates = df.date
@@ -234,6 +291,7 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
 
     for date in unique(dates)
         d_sessions = sessions[dates .== date]
+        α .= statePrior
         for session in unique(d_sessions)
             # Subset of trials for the session/date
             t_ind = findall((dates .== date) .& (sessions .== session))
@@ -243,17 +301,35 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
             # Initial α state
             # We're resetting this to the prior for each session
             # α(z_1k) = π_k p(x_1 | ϕ_k)
-            α .= statePrior
+            α .= (retain_belief .* α) .- ((1 - retain_belief) .* statePrior)
             prevs::Int = 0
             prevl::Int = 0
             # If rewarded, then emission = reward probs, otherwise 1 - reward probs
             # Note that we're normalizing α with a scaling factor (Bishop, p.627)
             # Since we only care about marginal belief at the current timestep,
             # no need to compute c
+
+            # reset depletion
+            depletion .= 1
             @inbounds for t in t_ind
                 # Q = expectation over states
                 # Q .= reshape(ϕT * α, (2, 3))'
-                Qtemp = ϕT * α
+                Qtemp .= (ϕT * α) .* depletion
+                if record
+                    Q_record[i, :] .= Qtemp
+                    state_entropy[i] = -sum(α .* log.(α))
+
+                    # First, find the probability of each leaf being .2/.5/.8
+                    # Next find entropy of that dist, and mean across all 6 leaves
+                    # Large extra allocations happening here
+                    reward_probs = vcat([
+                        sum((ϕ .== .2) .* α; dims=1)
+                        sum((ϕ .== .5) .* α; dims=1)
+                        sum((ϕ .== .8) .* α; dims=1)
+                        ])
+                    reward_entropy[i] = mean([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
+                end
+                    
                 Q[1][1] = Qtemp[1]
                 Q[1][2] = Qtemp[2]
                 Q[2][1] = Qtemp[3]
@@ -270,43 +346,41 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
                 
                 if (prevs == 1)
                     Qstem[2] += turn_bias
-                    # Qeff[2] .+= turn_bias
                     Qstem[2] += spatial_bias[1]
-                    # Qeff[2] .+= spatial_bias[1]
                 elseif (prevs == 2)
                     Qstem[3] += turn_bias
-                    # Qeff[3] .+= turn_bias
                     Qstem[3] += spatial_bias[2]
-                    # Qeff[3] .+= spatial_bias[2]
                 elseif (prevs == 3)
                     Qstem[1] += turn_bias
-                    # Qeff[1] .+= turn_bias
                     Qstem[1] += spatial_bias[3]
-                    # Qeff[1] .+= spatial_bias[3]
                 end
 
                 # stay bias
                 if (prevs == 1)
                     # Qstem[prevs] = βstay * Q[prevs][3-prevl] + stay_bias
                     if (prevl == 1)
-                        Qstem[1] = βstay * Q[1][2] + stay_bias
+                        Qstem[1] = βstay * (Q[1][2] + γ2 * Q[1][1]) + stay_bias
                     else
                         # Qstem[prevs] = βstay * Q[prevs][1] + stay_bias
-                        Qstem[1] = βstay * Q[1][1] + stay_bias
+                        Qstem[1] = βstay * (Q[1][1] + γ2 * Q[1][2]) + stay_bias
                     end
                     # Qeff[prevs] = βstay .* Qeff[prevs] .+ stay_bias
                 elseif (prevs == 2)
                     if (prevl == 1)
-                        Qstem[2] = βstay * Q[2][2] + stay_bias
+                        Qstem[2] = βstay * (Q[2][2] + γ2 * Q[2][1]) + stay_bias
                     else
-                        Qstem[2] = βstay * Q[2][1] + stay_bias
+                        Qstem[2] = βstay * (Q[2][1] + γ2 * Q[2][2]) + stay_bias
                     end
                 elseif (prevs == 3)
                     if (prevl == 1)
-                        Qstem[3] = βstay * Q[3][2] + stay_bias
+                        Qstem[3] = βstay * (Q[3][2] + γ2 * Q[3][1]) + stay_bias
                     else
-                        Qstem[3] = βstay * Q[3][1] + stay_bias
+                        Qstem[3] = βstay * (Q[3][1] + γ2 * Q[3][2]) + stay_bias
                     end
+                end
+
+                if record
+                    Q_record[i, :] .= Qtemp
                 end
                 # Stem choice: Current stem is modeled as the βstay * opposite leaf + stay_bias
                 # Other stems are modeled as mean
@@ -319,417 +393,274 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
                 end
                 # Leaf choice
                 if (add_leaf && (prevs != stemchoice[t]))
+                    # Add turn bias
+                    Q[stemchoice[t]][1] += leaf_turn_bias
+                    # Add per-stem turn biases
+                    if (stemchoice[t] == 1)
+                        Q[stemchoice[t]][1] += leaf_spatial_bias[1]
+                    elseif (stemchoice[t] == 2)
+                        Q[stemchoice[t]][1] += leaf_spatial_bias[2]
+                    else
+                        Q[stemchoice[t]][1] += leaf_spatial_bias[3]
+                    end
                     # log likelihood of leaf choice on switches only (meaningless for stay)
                     lik += βleaf * Q[stemchoice[t]][leafchoice[t]]
                     lik -= logsumexp(βleaf .* Q[stemchoice[t]]);
                     # actual leaf choice minus logsumexp of all leaves
                 end
 
-                prevl = leafchoice[t]
-                prevs = stemchoice[t]
-
                 # Update state prediction
                 α .= T * α
 
+                # Does the depletion matter at all? Or does it get normalized out?
+                # ϕ_depleted = ϕ .* repeat(depletion, 1, 72)'
                 if (reward[t] == 1)
-                    α .*= view(ϕ, :, leaf[t])
+                    α .*= view(ϕ, :, leaf[t]) .* depletion[leaf[t]]
                 else
-                    α .*= 1 .- view(ϕ, :, leaf[t])
+                    αtemp .= view(ϕ, :, leaf[t]) .* depletion[leaf[t]]
+                    α .*= 1 .- αtemp
                 end
                 normalize!(α, 1)
-            end
-        end
-    end
 
-    return -lik
-end
+                if (depletion_factor < 1.0)
+                    if (prevs == stemchoice[t])
+                        if (leaf[t] == 1)
+                            depletion[1] *= depletion_factor
+                        elseif (leaf[t] == 2)
+                            depletion[2] *= depletion_factor
+                        elseif (leaf[t] == 3)
+                            depletion[3] *= depletion_factor
+                        elseif (leaf[t] == 4)
+                            depletion[4] *= depletion_factor
+                        elseif (leaf[t] == 5)
+                            depletion[5] *= depletion_factor
+                        else
+                            depletion[6] *= depletion_factor
+                        end
+                    else
+                        depletion .= 1
+                    end
+                end
 
-"""
-Returns:
-    negative likelihood
-    Q: Inferred leaf Q-values at the start of each trial, ignoring biases
-    Qstem: Stem Q-values at each trial, including biases
-"""
-function hmm_Q(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ::Array{Float64, 2}, add_leaf) where U
-    nstates = size(ϕ, 1)
+                prevl = leafchoice[t]
+                prevs = stemchoice[t]
 
-    statePrior = ones(U,nstates) * 1/nstates
-
-    # volatility and state-state transition matrix T
-    T = ones(U,nstates,nstates) * volatility / (nstates - 1)
-    T[diagind(T)] .= 1 - volatility
-
-    lik::U = 0.
-
-    α = zeros(U, nstates)
-    # Really a 3x2 matrix, split up here for speed
-    ntrials = size(df, 1)
-    Q = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
-    Q_record = zeros(ntrials, 6)
-    # Qeff = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
-    Qstem = zeros(U, 3)
-    Qstem_record = zeros(ntrials, 3)
-    Qtemp = zeros(U, 6)
-    ϕT = ϕ'
-
-    # (dates, sessions, leaf, leafchoice, stemchoice, reward) = hmm_lik_extract_df(df)
-    dates = df.date
-    sessions = df.session
-    leaf = df.leaf
-    leafchoice = df.leafchoice
-    stemchoice = df.stemchoice
-    reward = df.reward
-
-    i = 1
-    for date in unique(dates)
-        d_sessions = sessions[dates .== date]
-        for session in unique(d_sessions)
-            # Subset of trials for the session/date
-            t_ind = findall((dates .== date) .& (sessions .== session))
-            ntrials::Int = length(t_ind)   
-            # α is the joint probability of all observations, and the state at time t
-            # For predictive purposes, α at time t is prior to the outcome information for trial t            
-
-            # Initial α state
-            # We're resetting this to the prior for each session
-            # α(z_1k) = π_k p(x_1 | ϕ_k)
-            α .= statePrior
-            prevs::Int = 0
-            prevl::Int = 0
-            # If rewarded, then emission = reward probs, otherwise 1 - reward probs
-            # Note that we're normalizing α with a scaling factor (Bishop, p.627)
-            # Since we only care about marginal belief at the current timestep,
-            # no need to compute c
-            @inbounds for t in t_ind
-                # Q = expectation over states
-                # Q .= reshape(ϕT * α, (2, 3))'
-                Qtemp = ϕT * α
-                Q_record[i, :] .= Qtemp
                 i += 1
-                Q[1][1] = Qtemp[1]
-                Q[1][2] = Qtemp[2]
-                Q[2][1] = Qtemp[3]
-                Q[2][2] = Qtemp[4]
-                Q[3][1] = Qtemp[5]
-                Q[3][2] = Qtemp[6]
-                # Qeff[1] .= Q[1]
-                # Qeff[2] .= Q[2]
-                # Qeff[3] .= Q[3]
-                Qstem .= βgo .* mean.(Q)
-
-                # spatial bias
-                # If-else was providing a speedup, may be fixed with views?
-                
-                if (prevs == 1)
-                    Qstem[2] += turn_bias
-                    # Qeff[2] .+= turn_bias
-                    Qstem[2] += spatial_bias[1]
-                    # Qeff[2] .+= spatial_bias[1]
-                elseif (prevs == 2)
-                    Qstem[3] += turn_bias
-                    # Qeff[3] .+= turn_bias
-                    Qstem[3] += spatial_bias[2]
-                    # Qeff[3] .+= spatial_bias[2]
-                elseif (prevs == 3)
-                    Qstem[1] += turn_bias
-                    # Qeff[1] .+= turn_bias
-                    Qstem[1] += spatial_bias[3]
-                    # Qeff[1] .+= spatial_bias[3]
-                end
-
-                # stay bias
-                if (prevs == 1)
-                    # Qstem[prevs] = βstay * Q[prevs][3-prevl] + stay_bias
-                    if (prevl == 1)
-                        Qstem[1] = βstay * Q[1][2] + stay_bias
-                    else
-                        # Qstem[prevs] = βstay * Q[prevs][1] + stay_bias
-                        Qstem[1] = βstay * Q[1][1] + stay_bias
-                    end
-                    # Qeff[prevs] = βstay .* Qeff[prevs] .+ stay_bias
-                elseif (prevs == 2)
-                    if (prevl == 1)
-                        Qstem[2] = βstay * Q[2][2] + stay_bias
-                    else
-                        Qstem[2] = βstay * Q[2][1] + stay_bias
-                    end
-                elseif (prevs == 3)
-                    if (prevl == 1)
-                        Qstem[3] = βstay * Q[3][2] + stay_bias
-                    else
-                        Qstem[3] = βstay * Q[3][1] + stay_bias
-                    end
-                end
-
-                Qstem_record[i, :] .= Qstem
-                # Stem choice: Current stem is modeled as the βstay * opposite leaf + stay_bias
-                # Other stems are modeled as mean
-                if (stemchoice[t] == 1)
-                    lik += Qstem[1] - logsumexp(Qstem)
-                elseif (stemchoice[t] == 2)
-                    lik += Qstem[2] - logsumexp(Qstem)
-                else
-                    lik += Qstem[3] - logsumexp(Qstem)
-                end
-                # Leaf choice
-                if (prevs != stemchoice[t])
-                    # log likelihood of leaf choice on switches only (meaningless for stay)
-                    lik += βleaf * Q[stemchoice[t]][leafchoice[t]]
-                    lik -= logsumexp(βleaf .* Q[stemchoice[t]]);
-                    # actual leaf choice minus logsumexp of all leaves
-                end
-
-                prevl = leafchoice[t]
-                prevs = stemchoice[t]
-
-                # Update state prediction
-                α .= T * α
-
-                if (reward[t] == 1)
-                    α .*= view(ϕ, :, leaf[t])
-                else
-                    α .*= 1 .- view(ϕ, :, leaf[t])
-                end
-                normalize!(α, 1)
             end
         end
     end
 
-    return -lik, Q_record, Qstem_record
+    if record
+        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy
+    else
+        return -lik
+    end
 end
-
 
 """
-hmm_lik
-    params: βgo, βstay, βleaf, ...biases, volatility 
-    data
+run_hmm
+
+βleaf: Beta weight for leaf choice softmax
+turn_bias: Offset added to (leftward?) choice
+spatial_bias: Per-stem offset added to (leftward?) choice
+leaf_turn_bias: Offset added to 'first' leaf on entering a new stem
+leaf_spatial_bias: Per-stem leaf turn bias
+γ2: Discount on timestep 2 for other leaf
+depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
+add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 """
-function hmm_lik_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = 0.0 # beta for leaf choice on switch
-    stay_bias = 0.0
-    turn_bias = 0.0
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[3] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
-end
+function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
+    add_βleaf=false,
+    add_stay_bias=false,
+    add_turn_bias=false,
+    add_spatial_bias=false,
+    add_leaf_turn_bias=false,
+    add_leaf_spatial_bias=false,
+    add_γ2=false,
+    add_depletion_factor=false,
+    add_retain_belief=false,
+    add_leaf=true)
 
-function hmm_lik_stay_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = 0.0 # beta for leaf choice on switch
-    stay_bias = params[3]
-    turn_bias = 0.0
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[4] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
-end
-
-function hmm_lik_stay_turn_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = 0.0 # beta for leaf choice on switch
-    stay_bias = params[3]
-    turn_bias = params[4]
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
-end
-
-function hmm_lik_stay_turn_observed_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = 0.0 # beta for leaf choice on switch
-    stay_bias = params[3]
-    turn_bias = params[4]
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies_observed()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
-end
-
-function hmm_lik_stay_spatial_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = 0.0 # beta for leaf choice on switch
-    stay_bias = params[3]
-    turn_bias = 0.0
-    spatial_bias = params[4:6]
-    volatility = 0.1 + 0.1 * erf(params[7] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, false)
-end
-
-function hmm_lik_leaf_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = 0.0
-    turn_bias = 0.0
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[4] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
-end
-
-function hmm_lik_leaf_stay_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = params[4]
-    turn_bias = 0.0
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[5] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
-end
-
-function hmm_lik_leaf_stay_turn_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = params[4]
-    turn_bias = params[5]
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[6] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
-end
-
-function hmm_lik_leaf_stay_turn_observed_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = params[4]
-    turn_bias = params[5]
-    spatial_bias = [0.0, 0.0, 0.0]
-    volatility = 0.1 + 0.1 * erf(params[6] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies_observed()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
-end
-
-function hmm_lik_leaf_stay_spatial_fn(params, data)
-    # these are the free parameters
-    βgo = params[1]   # beta for switch to alternative stem 
-    βstay = params[2] # beta for current stem
-    βleaf = params[3] # beta for leaf choice on switch
-    stay_bias = params[4]
-    turn_bias = 0.0
-    spatial_bias = params[5:7]
-    volatility = 0.1 + 0.1 * erf(params[8] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-    ϕ = get_contingencies()
-    return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, volatility, ϕ, true)
-end
-
-function run_hmm_em(animal; maxiter=100)
-    data = load_animal(animal)
-    full = true
-    fn = hmm_lik_fn
-    data[!, :sub] = string.(data.date)
-    subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
-    NS = length(subs) #number of subjects/days
-    X = ones(NS) # (group level design matrix); #x group level design matrix...
-    # matrix across all days of this task)
-
-    # fit the full model
-    initbetas = [0. 0 0 0] 
-    initsigma = [5., 5, 5, 1]
-    varnames = ["βgo", "βstay", "βleaf", "volatility"]
-
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter=maxiter);
-    (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-    EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
-end
-
-function run_hmm_em_stay(animal; maxiter=100)
-    data = load_animal(animal)
-    full = true
-    fn = hmm_lik_stay_fn
-    data[!, :sub] = string.(data.date)
-    subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
-    NS = length(subs) #number of subjects/days
-    X = ones(NS) # (group level design matrix); #x group level design matrix...
-    # matrix across all days of this task)
-
-    # fit the full model
-    initbetas = [0. 0 0 0 0] 
-    initsigma = [5., 5, 5, 5, 1]
-    varnames = ["βgo", "βstay", "βleaf", "stay_bias", "volatility"]
-
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter=maxiter);
-    (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-    EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
-end
-
-function run_hmm_em_stay_turn(animal; maxiter=100)
-    data = load_animal(animal)
-    full = true
-    fn = hmm_lik_stay_turn_fn
-    # data[!, :sub] = string.(data.date)
+    data = copy(df)
     data[:, :sub] = data[:, :daynum]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
-    # matrix across all days of this task)
 
-    # fit the full model
-    initbetas = [0. 0 0 0 0 0] 
-    initsigma = [5., 5, 5, 5, 1, 1]
-    varnames = ["βgo", "βstay", "βleaf", "stay_bias", "turn_bias", "volatility"]
+    initbetas = [0. 0]
+    initsigma = [5., 5]
+    varnames = ["βgo", "βstay"]
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter=maxiter);
-    (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-    EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+    if add_βleaf
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βleaf")
+    end
+    if add_stay_bias
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "stay_bias")
+    end
+    if add_turn_bias
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "turn_bias")
+    end
+    if add_spatial_bias
+        initbetas = hcat(initbetas, 0, 0, 0)
+        initsigma = vcat(initsigma, 1, 1, 1)
+        varnames = vcat(varnames, "spatial_1", "spatial_2", "spatial_3")
+    end
+    if add_leaf_turn_bias
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "leaf_turn_bias")
+    end
+    if add_leaf_spatial_bias
+        initbetas = hcat(initbetas, 0, 0, 0)
+        initsigma = vcat(initsigma, 1, 1, 1)
+        varnames = vcat(varnames, "leaf_spatial_1", "leaf_spatial_2", "leaf_spatial_3")
+    end
+    if add_γ2
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "γ2")
+    end
+    if add_depletion_factor
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "depletion_factor")
+    end
+    if add_retain_belief
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "retain_belief")
+    end
+
+    initbetas = hcat(initbetas, 0)
+    push!(initsigma, 1)
+    push!(varnames, "volatility")
+
+    function fn(params, data)
+        βgo = params[1]
+        βstay = params[2]
+        i = 3
+
+        if add_βleaf
+            βleaf = params[i] # beta for leaf choice on switch
+            i += 1
+        else
+            βleaf = 0.0
+        end
+
+        if add_stay_bias
+            stay_bias = params[i] # beta for leaf choice on switch
+            i += 1
+        else
+            stay_bias = 0.0
+        end
+
+        if add_turn_bias
+            turn_bias = params[i] # beta for leaf choice on switch
+            i += 1
+        else
+            turn_bias = 0.0
+        end
+
+        if add_spatial_bias
+            spatial_bias = params[i:i+2] # beta for leaf choice on switch
+            i += 3
+        else
+            spatial_bias = [0.0, 0.0, 0.0]
+        end
+
+        if add_leaf_turn_bias
+            leaf_turn_bias = params[i] # beta for leaf choice on switch
+            i += 1
+        else
+            leaf_turn_bias = 0.0
+        end
+
+        if add_leaf_spatial_bias
+            leaf_spatial_bias = params[i:i+2] # beta for leaf choice on switch
+            i += 3
+        else
+            leaf_spatial_bias = [0.0, 0.0, 0.0]
+        end
+
+        if add_γ2
+            γ2 = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            i += 1
+        else
+            γ2 = 0.0
+        end
+
+        if add_depletion_factor
+            depletion_factor = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            i += 1
+        else
+            depletion_factor = 1.0
+        end
+
+        if add_retain_belief
+            retain_belief = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            i += 1
+        else
+            retain_belief = 0.0
+        end
+
+        volatility = 0.5 + 0.5 * erf(params[i] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+        ϕ = get_contingencies()
+        return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, volatility, γ2, depletion_factor, retain_belief, ϕ, add_leaf, false)
+    end
+
+    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);
+    if extended
+        (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
+        return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+    else
+        return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+    end
 end
 
-function run_hmm_em_stay_spatial(animal; maxiter=100)
-    data = load_animal(animal)
-    full = true
-    fn = hmm_lik_stay_spatial_fn
-    data[!, :sub] = string.(data.date)
-    subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
-    NS = length(subs) #number of subjects/days
-    X = ones(NS) # (group level design matrix); #x group level design matrix...
-    # matrix across all days of this task)
+run_hmm_leaf(data; kwargs...) = run_hmm(data; add_βleaf=true, kwargs...)
+run_hmm_leaf_stay(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, kwargs...)
+run_hmm_leaf_stay_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
 
-    # fit the full model
-    initbetas = [0. 0 0 0 0 0 0 0] 
-    initsigma = [5., 5, 5, 5, 1, 1, 1, 1]
-    varnames = ["βgo", "βstay", "βleaf", "stay_bias", "spatial_bias_1", "spatial_bias_2", "spatial_bias_3", "volatility"]
+run_hmm_leaf_stay_turn(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, kwargs...)
+run_hmm_leaf_stay_spatial(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, kwargs...)
+run_hmm_leaf_stay_turn_leafspatial(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, kwargs...)
+run_hmm_leaf_stay_turn_leafturn(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafspatial(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafturn(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, kwargs...)
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter=maxiter);
-    (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-    EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
-end
+run_hmm_leaf_stay_turn_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_turn_leafspatial_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_turn_leafturn_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafspatial_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafturn_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, kwargs...)
 
-# estimate parameters
-# original task
-# function hmm_test()
-#     data = load_animal("peanut")
-#     full = true
-#     fn = hmm_lik_stay_spatial_fn
-#     data[:, :sub] = data[:, :daynum]
-#     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects, poor variable naming
-#     NS = length(subs) #number of subjects/days
-#     X = ones(NS) # (group level design matrix); #x group level design matrix... matrix across all days of this task)
+run_hmm_leaf_stay_turn_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_spatial_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_turn_leafspatial_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_turn_leafturn_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafspatial_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafturn_depletion_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, add_retain_belief=true, kwargs...)
 
-#     # fit the full model
-#     initbetas = [0. 0 0 0 0 0 0 0] 
-#     initsigma = [5., 5, 5, 5, 1, 1, 1, 1]
+run_hmm_leaf_stay_turn_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_spatial_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_turn_leafspatial_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_turn_leafturn_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafspatial_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafturn_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
 
-#     @time em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter = 20)
-#     @time em(data,subs,X,initbetas,initsigma,fn; emtol=1e-3, full=full, maxiter = 20);
-# end
+run_hmm_leaf_stay_turn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_turn_leafspatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_turn_leafturn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafspatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_leaf_stay_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
