@@ -224,6 +224,64 @@ end
 import Base.length
 length(df::U) where U <: DataFrame = size(df, 1)
 
+function hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+    Qstem .= βgo .* mean.(Q)
+
+    # spatial bias
+    # If-else was providing a speedup, may be fixed with views?
+    
+    if (prevs == 1)
+        Qstem[2] += turn_bias
+        Qstem[2] += spatial_bias[1]
+    elseif (prevs == 2)
+        Qstem[3] += turn_bias
+        Qstem[3] += spatial_bias[2]
+    elseif (prevs == 3)
+        Qstem[1] += turn_bias
+        Qstem[1] += spatial_bias[3]
+    end
+
+    # stay bias
+    if (prevs == 1)
+        # Qstem[prevs] = βstay * Q[prevs][3-prevl] + stay_bias
+        if (prevl == 1)
+            Qstem[1] = βstay * (Q[1][2] + γ2 * Q[1][1]) + stay_bias
+        else
+            # Qstem[prevs] = βstay * Q[prevs][1] + stay_bias
+            Qstem[1] = βstay * (Q[1][1] + γ2 * Q[1][2]) + stay_bias
+        end
+        # Qeff[prevs] = βstay .* Qeff[prevs] .+ stay_bias
+    elseif (prevs == 2)
+        if (prevl == 1)
+            Qstem[2] = βstay * (Q[2][2] + γ2 * Q[2][1]) + stay_bias
+        else
+            Qstem[2] = βstay * (Q[2][1] + γ2 * Q[2][2]) + stay_bias
+        end
+    elseif (prevs == 3)
+        if (prevl == 1)
+            Qstem[3] = βstay * (Q[3][2] + γ2 * Q[3][1]) + stay_bias
+        else
+            Qstem[3] = βstay * (Q[3][1] + γ2 * Q[3][2]) + stay_bias
+        end
+    end
+end
+
+function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_spatial_bias)
+    # Leaf choice
+    Qleaf .= Q[stemchoice]
+    # Add turn bias
+    Qleaf[1] += leaf_turn_bias
+    # Add per-stem turn biases
+    if (stemchoice == 1)
+        Qleaf[1] += leaf_spatial_bias[1]
+    elseif (stemchoice == 2)
+        Qleaf[1] += leaf_spatial_bias[2]
+    else
+        Qleaf[1] += leaf_spatial_bias[3]
+    end
+    Qleaf .*= βleaf
+end
+
 """
 hmm_lik
 
@@ -267,6 +325,8 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     αtemp = zeros(U, nstates)
     # Really a 3x2 matrix, split up here for speed
     Q = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
+    Qstem = zeros(U, 3)
+    Qleaf = zeros(U, 2)
     # Qeff = [zeros(U, 2), zeros(U, 2), zeros(U, 2)]
     Qstem = zeros(U, 3)
     Qtemp = zeros(U, 6)
@@ -276,6 +336,11 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
         Qstem_record = zeros(ntrials, 3)
         state_entropy = zeros(ntrials)
         reward_entropy = zeros(ntrials)
+        stem_1_var = zeros(ntrials)
+        stem_2_var = zeros(ntrials)
+        stem_3_var = zeros(ntrials)
+        leaf_1_var = zeros(ntrials)
+        leaf_2_var = zeros(ntrials)
     end
     i = 1
 
@@ -315,6 +380,19 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
                 # Q = expectation over states
                 # Q .= reshape(ϕT * α, (2, 3))'
                 Qtemp .= (ϕT * α) .* depletion
+                Q[1][1] = Qtemp[1]
+                Q[1][2] = Qtemp[2]
+                Q[2][1] = Qtemp[3]
+                Q[2][2] = Qtemp[4]
+                Q[3][1] = Qtemp[5]
+                Q[3][2] = Qtemp[6]
+                hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+                lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
+                if (add_leaf && (prevs != stemchoice[t]))
+                    hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
+                    lik += Qleaf[leafchoice[t]] - logsumexp(Qleaf)
+                end
+
                 if record
                     Q_record[i, :] .= Qtemp
                     state_entropy[i] = -sum(α .* log.(α))
@@ -328,85 +406,68 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
                         sum((ϕ .== .8) .* α; dims=1)
                         ])
                     reward_entropy[i] = mean([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
-                end
-                    
-                Q[1][1] = Qtemp[1]
-                Q[1][2] = Qtemp[2]
-                Q[2][1] = Qtemp[3]
-                Q[2][2] = Qtemp[4]
-                Q[3][1] = Qtemp[5]
-                Q[3][2] = Qtemp[6]
-                # Qeff[1] .= Q[1]
-                # Qeff[2] .= Q[2]
-                # Qeff[3] .= Q[3]
-                Qstem .= βgo .* mean.(Q)
 
-                # spatial bias
-                # If-else was providing a speedup, may be fixed with views?
-                
-                if (prevs == 1)
-                    Qstem[2] += turn_bias
-                    Qstem[2] += spatial_bias[1]
-                elseif (prevs == 2)
-                    Qstem[3] += turn_bias
-                    Qstem[3] += spatial_bias[2]
-                elseif (prevs == 3)
-                    Qstem[1] += turn_bias
-                    Qstem[1] += spatial_bias[3]
-                end
+                    state = 1
+                    state_probs = zeros(729)
+                    stem_1_choice_probs = zeros(729)
+                    stem_2_choice_probs = zeros(729)
+                    stem_3_choice_probs = zeros(729)
+                    leaf_1_choice_probs = zeros(729)
+                    leaf_2_choice_probs = zeros(729)
+                    for i1 in 1:3
+                        p11 = reward_probs[i1, 1]
+                        Q[1][1] = [0.2, 0.5, 0.8][i1] * depletion[1]
+                        for i2 in 1:3
+                            p12 = reward_probs[i2, 2]
+                            Q[1][2] = [0.2, 0.5, 0.8][i2] * depletion[2]
+                            for j1 in 1:3
+                                p21 = reward_probs[j1, 3]
+                                Q[2][1] = [0.2, 0.5, 0.8][j1] * depletion[3]
+                                for j2 in 1:3
+                                    p22 = reward_probs[j2, 4]
+                                    Q[2][2] = [0.2, 0.5, 0.8][j2] * depletion[4]
+                                    for k1 in 1:3
+                                        p31 = reward_probs[k1, 5]
+                                        Q[3][1] = [0.2, 0.5, 0.8][k1] * depletion[5]
+                                        for k2 in 1:3
+                                            p32 = reward_probs[k2, 6]
+                                            Q[3][2] = [0.2, 0.5, 0.8][k2] * depletion[6]
 
-                # stay bias
-                if (prevs == 1)
-                    # Qstem[prevs] = βstay * Q[prevs][3-prevl] + stay_bias
-                    if (prevl == 1)
-                        Qstem[1] = βstay * (Q[1][2] + γ2 * Q[1][1]) + stay_bias
-                    else
-                        # Qstem[prevs] = βstay * Q[prevs][1] + stay_bias
-                        Qstem[1] = βstay * (Q[1][1] + γ2 * Q[1][2]) + stay_bias
+                                            state_probs[state] = p11 * p12 * p21 * p22 * p31 * p32
+                        
+                                            hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+                                            stem_1_choice_probs[state] = Qstem[1] - logsumexp(Qstem)
+                                            stem_2_choice_probs[state] = Qstem[2] - logsumexp(Qstem)
+                                            stem_3_choice_probs[state] = Qstem[3] - logsumexp(Qstem)
+                                            if (add_leaf && (prevs != stemchoice[t]))
+                                                hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
+                                                leaf_1_choice_probs[state] = Qleaf[1] - logsumexp(Qleaf)
+                                                leaf_2_choice_probs[state] = Qleaf[2] - logsumexp(Qleaf)
+                                            end
+                                            state += 1
+                                        end
+                                    end
+                                end
+                            end
+                        end
                     end
-                    # Qeff[prevs] = βstay .* Qeff[prevs] .+ stay_bias
-                elseif (prevs == 2)
-                    if (prevl == 1)
-                        Qstem[2] = βstay * (Q[2][2] + γ2 * Q[2][1]) + stay_bias
-                    else
-                        Qstem[2] = βstay * (Q[2][1] + γ2 * Q[2][2]) + stay_bias
+                    exp_stem_1_choice_probs = exp.(stem_1_choice_probs)
+                    exp_stem_2_choice_probs = exp.(stem_2_choice_probs)
+                    exp_stem_3_choice_probs = exp.(stem_3_choice_probs)
+                    exp_leaf_1_choice_probs = exp.(leaf_1_choice_probs)
+                    exp_leaf_2_choice_probs = exp.(leaf_2_choice_probs)
+                    stem_1_mu = sum(state_probs .* exp_stem_1_choice_probs)
+                    stem_2_mu = sum(state_probs .* exp_stem_2_choice_probs)
+                    stem_3_mu = sum(state_probs .* exp_stem_3_choice_probs)
+                    leaf_1_mu = sum(state_probs .* exp_leaf_1_choice_probs)
+                    leaf_2_mu = sum(state_probs .* exp_leaf_2_choice_probs)
+                    for j in 1:729
+                        stem_1_var[i] += state_probs[j] * (exp_stem_1_choice_probs[j] - stem_1_mu)^2
+                        stem_2_var[i] += state_probs[j] * (exp_stem_2_choice_probs[j] - stem_2_mu)^2
+                        stem_3_var[i] += state_probs[j] * (exp_stem_3_choice_probs[j] - stem_3_mu)^2
+                        leaf_1_var[i] += state_probs[j] * (exp_leaf_1_choice_probs[j] - leaf_1_mu)^2
+                        leaf_2_var[i] += state_probs[j] * (exp_leaf_2_choice_probs[j] - leaf_2_mu)^2
                     end
-                elseif (prevs == 3)
-                    if (prevl == 1)
-                        Qstem[3] = βstay * (Q[3][2] + γ2 * Q[3][1]) + stay_bias
-                    else
-                        Qstem[3] = βstay * (Q[3][1] + γ2 * Q[3][2]) + stay_bias
-                    end
-                end
-
-                if record
-                    Q_record[i, :] .= Qtemp
-                end
-                # Stem choice: Current stem is modeled as the βstay * opposite leaf + stay_bias
-                # Other stems are modeled as mean
-                if (stemchoice[t] == 1)
-                    lik += Qstem[1] - logsumexp(Qstem)
-                elseif (stemchoice[t] == 2)
-                    lik += Qstem[2] - logsumexp(Qstem)
-                else
-                    lik += Qstem[3] - logsumexp(Qstem)
-                end
-                # Leaf choice
-                if (add_leaf && (prevs != stemchoice[t]))
-                    # Add turn bias
-                    Q[stemchoice[t]][1] += leaf_turn_bias
-                    # Add per-stem turn biases
-                    if (stemchoice[t] == 1)
-                        Q[stemchoice[t]][1] += leaf_spatial_bias[1]
-                    elseif (stemchoice[t] == 2)
-                        Q[stemchoice[t]][1] += leaf_spatial_bias[2]
-                    else
-                        Q[stemchoice[t]][1] += leaf_spatial_bias[3]
-                    end
-                    # log likelihood of leaf choice on switches only (meaningless for stay)
-                    lik += βleaf * Q[stemchoice[t]][leafchoice[t]]
-                    lik -= logsumexp(βleaf .* Q[stemchoice[t]]);
-                    # actual leaf choice minus logsumexp of all leaves
                 end
 
                 # Update state prediction
@@ -451,7 +512,7 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     end
 
     if record
-        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy
+        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy, stem_1_var, stem_2_var, stem_3_var, leaf_1_var, leaf_2_var
     else
         return -lik
     end
