@@ -337,6 +337,11 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
         Qstem_record = zeros(ntrials, 3)
         state_entropy = zeros(ntrials)
         reward_entropy = zeros(ntrials)
+        stem_1_p = zeros(ntrials)
+        stem_2_p = zeros(ntrials)
+        stem_3_p = zeros(ntrials)
+        leaf_1_p = zeros(ntrials)
+        leaf_2_p = zeros(ntrials)
         stem_1_var = zeros(ntrials)
         stem_2_var = zeros(ntrials)
         stem_3_var = zeros(ntrials)
@@ -395,6 +400,14 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
                 end
 
                 if record
+                    stem_1_p[i] = exp(Qstem[1] - logsumexp(Qstem))
+                    stem_2_p[i] = exp(Qstem[2] - logsumexp(Qstem))
+                    stem_3_p[i] = exp(Qstem[3] - logsumexp(Qstem))
+                    if (add_leaf && (prevs != stemchoice[t]))
+                        leaf_1_p[i] = exp(Qleaf[1] - logsumexp(Qleaf))
+                        leaf_2_p[i] = exp(Qleaf[2] - logsumexp(Qleaf))
+                    end
+
                     Q_record[i, :] .= Qtemp
                     state_entropy[i] = -sum(α .* log.(α))
 
@@ -513,7 +526,7 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     end
 
     if record
-        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy, stem_1_var, stem_2_var, stem_3_var, leaf_1_var, leaf_2_var
+        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy, stem_1_p, stem_2_p, stem_3_p, leaf_1_p, leaf_2_p, stem_1_var, stem_2_var, stem_3_var, leaf_1_var, leaf_2_var
     else
         return -lik
     end
