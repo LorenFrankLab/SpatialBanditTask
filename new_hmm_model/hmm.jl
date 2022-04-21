@@ -223,6 +223,7 @@ end
 
 import Base.length
 length(df::U) where U <: DataFrame = size(df, 1)
+length(df::U) where U <: SubDataFrame = size(df, 1)
 
 function hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
     Qstem .= βgo .* mean.(Q)
