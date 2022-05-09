@@ -601,6 +601,8 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
 end
 
 run_hmm_leaf(data; kwargs...) = run_hmm(data; add_βleaf=true, kwargs...)
+run_hmm_leaf_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_γ2=true, kwargs...)
+run_hmm_leaf_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_retain_belief=true, kwargs...)
 run_hmm_leaf_stay(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, kwargs...)
 run_hmm_leaf_stay_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_γ2=true, kwargs...)
 run_hmm_leaf_stay_retainbelief(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_retain_belief=true, kwargs...)
