@@ -445,6 +445,7 @@ leaf_spatial_bias: Per-stem leaf turn bias
 γ2: Discount on timestep 2 for other leaf
 depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
+ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
 """
 function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
     add_βleaf=false,
@@ -456,7 +457,8 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
     add_γ2=false,
     add_depletion_factor=false,
     add_retain_belief=false,
-    add_leaf=true)
+    add_leaf=true,
+    ϕ=nothing)
 
     data = copy(df)
     data[:, :sub] = data[:, :daynum]
@@ -587,7 +589,10 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
         end
 
         volatility = 0.5 + 0.5 * erf(params[i] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
-        ϕ = get_contingencies()
+
+        if ϕ === nothing
+            ϕ = get_contingencies()
+        end
         return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, volatility, γ2, depletion_factor, retain_belief, ϕ, add_leaf, false)
     end
 
