@@ -38,6 +38,27 @@ function cont_combination_old(s)
     parse.(Int, split(s, "0"; keepempty=false)) ./ 10
 end
 
+"""
+Return a dataframe for the animal
+
+    animal<string>: Name of the animal
+    depletion<bool, default false>: Whether to use the non-depletion or depletion data for this anmal
+
+    Coding:
+    reward: 0/1
+    rewscaled: -1/1
+
+    stem: A/B/C
+    stemchoice: 1-3
+    leaf: 1-6
+    leafchoice: 1-2 (conditional on stem)
+
+    trial: 0-179
+    session: 1-?, per-day session number, e.g. 1 is first session each day
+    daynum: 1-?, contiguous day numbering
+    daysessionnum: 1-?, unique session number continued across days
+
+"""
 function load_animal(animal; depletion=false)
     filepath = "/Users/ari/Dropbox/Princeton/Loren Frank Lab/SpatialBanditTask"
     
