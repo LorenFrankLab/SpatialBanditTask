@@ -35,7 +35,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
 
     Q = zeros(U,3,2,length(c1)+1)
     Qeff = zeros(U,3,2,length(c1)+1)
-    Qstem = zeros(U,3)
+    Qstem = zeros(U,3,1)
     Qleaf = zeros(U,2)
 
     for i = 1:length(c1)
