@@ -59,9 +59,7 @@ Return a dataframe for the animal
     daysessionnum: 1-?, unique session number continued across days
 
 """
-function load_animal(animal; depletion=false)
-    filepath = "/Users/ari/Dropbox/Princeton/Loren Frank Lab/SpatialBanditTask"
-    
+function load_animal(animal, filepath; depletion=false)
     # csv_file to estimate value for
     if depletion
         csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
@@ -70,7 +68,7 @@ function load_animal(animal; depletion=false)
         csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
         # mkdir(fullfile(filepath,['hmm_',animal]))
     end
-    fullpath = joinpath(filepath, "data", csv_file)
+    fullpath = joinpath(filepath, "/data", csv_file)
     df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
 
     # recode some variables
