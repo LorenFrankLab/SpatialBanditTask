@@ -41,11 +41,11 @@ fns = [
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod(i - 1, length(animals)) .+ 1
 animal = animals[animal_ind]
-data = load_animal(animal, ".."; depletion=false, extended=true)
+data = load_animal(animal, ".."; depletion=false)
 (fname, fn) = fns[fn_ind]
 
 println(animal)
 println(fn)
 
-results = fn(data)
+results = fn(data; extended=true)
 save("../results/hmm_biases/$(fname)_$(animal).jld2", "$(fname)_$(animal)", results)
