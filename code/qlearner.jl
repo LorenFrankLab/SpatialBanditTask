@@ -4,7 +4,7 @@ using SpecialFunctions
 using EM
 # this is the likelihood function for the actual model
 
-function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, add_leaf::Bool, record::Bool) where U
+function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     """
     learn_q: If true, learn Q values trial by trial.
              If false, use provided data[trial, :q1], data[trial, :q2] etc
@@ -22,7 +22,11 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     # mode = "likelihood"
 
     # rename the variables for easy acccess
-    r = data.rewscaled
+    if rewscaled
+        r = data.rewscaled
+    else
+        r = data.reward
+    end
     c1 = data.stemchoice
     c2 = data.leafchoice
 
@@ -111,11 +115,11 @@ end
 """
 Function for EM to allow params to vary from -inf to inf
 """
-function qlik_em(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, add_leaf::Bool, record::Bool) where U
+function qlik_em(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     αnorm = 0.5 + 0.5 * erf(α / sqrt(2))
     γ2norm = 0.5 + 0.5 * erf(γ2 / sqrt(2))
     retain_belief_norm = 0.5 + 0.5 * erf(retain_belief / sqrt(2))
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2norm, retain_belief_norm, αnorm, add_leaf, record)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2norm, retain_belief_norm, αnorm, rewscaled, add_leaf, record)
 end
 
 function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
@@ -128,6 +132,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
     add_leaf=true,
     add_γ2=false,
     add_retain_belief=false,
+    rewscaled=false,
     )
 
     data = copy(df)
@@ -249,7 +254,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
         α = 0.5 + 0.5 * erf(params[i] / sqrt(2))
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);

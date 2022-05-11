@@ -212,7 +212,7 @@ If 'return':
     state_entropy
     reward_entropy
 """
-function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, volatility, γ2, depletion_factor, retain_belief, ϕ::Array{Float64, 2}, add_leaf, record::Bool) where U
+function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     nstates = size(ϕ, 1)
     ntrials = length(df)
 
@@ -260,7 +260,11 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     leaf = df.leaf
     leafchoice = df.leafchoice
     stemchoice = df.stemchoice
-    reward = df.reward
+    if rewscaled
+        reward = df.rewscaled
+    else
+        reward = df.reward
+    end
 
     for date in unique(dates)
         d_sessions = sessions[dates .== date]
@@ -434,20 +438,29 @@ function hmm_lik(df, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias
     end
 end
 
+# Probably shouldn't use this second version in the EM code
+# As julia doens't allow specialization on kw arguments?
+function hmm_lik(df, ϕ, volatility, βgo; βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., rewscaled=false, add_leaf=true, record=false)
+    hmm_lik(df, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, record)
+end
+
 """
 run_hmm
 
 βleaf: Beta weight for leaf choice softmax
+stay_bias: Offset added to staying at current stem
 turn_bias: Offset added to (leftward?) choice
 spatial_bias: Per-stem offset added to (leftward?) choice
 leaf_turn_bias: Offset added to 'first' leaf on entering a new stem
 leaf_spatial_bias: Per-stem leaf turn bias
 γ2: Discount on timestep 2 for other leaf
 depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
+retain_belief: Fraction of belief in HMM state to retain between sessions
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
 """
 function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
+    ϕ=nothing,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -457,8 +470,9 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
     add_γ2=false,
     add_depletion_factor=false,
     add_retain_belief=false,
+    rewscaled=false,
     add_leaf=true,
-    ϕ=nothing)
+    )
 
     data = copy(df)
     data[:, :sub] = data[:, :daynum]
@@ -466,9 +480,9 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
 
-    initbetas = [0. 0]
-    initsigma = [5., 5]
-    varnames = ["βgo", "βstay"]
+    initbetas = [0 0 0]
+    initsigma = [1., 5, 5]
+    varnames = ["volatility", "βgo", "βstay"]
 
     if add_βleaf
         initbetas = hcat(initbetas, 0)
@@ -516,14 +530,15 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
         push!(varnames, "retain_belief")
     end
 
-    initbetas = hcat(initbetas, 0)
-    push!(initsigma, 1)
-    push!(varnames, "volatility")
-
     function fn(params, data)
-        βgo = params[1]
-        βstay = params[2]
-        i = 3
+        if ϕ === nothing
+            ϕ = get_contingencies()
+        end
+
+        volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+        βgo = params[2]
+        βstay = params[3]
+        i = 4
 
         if add_βleaf
             βleaf = params[i] # beta for leaf choice on switch
@@ -588,12 +603,8 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
             retain_belief = 0.0
         end
 
-        volatility = 0.5 + 0.5 * erf(params[i] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
 
-        if ϕ === nothing
-            ϕ = get_contingencies()
-        end
-        return hmm_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, volatility, γ2, depletion_factor, retain_belief, ϕ, add_leaf, false)
+        return hmm_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);
