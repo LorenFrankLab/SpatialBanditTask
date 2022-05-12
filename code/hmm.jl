@@ -182,7 +182,7 @@ function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_
     else
         Qleaf[1] += leaf_spatial_bias[3]
     end
-    Qleaf .= Qleaf .+ βleaf
+    Qleaf .= Qleaf .* βleaf
 end
 
 """
