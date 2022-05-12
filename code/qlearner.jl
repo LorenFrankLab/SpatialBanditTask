@@ -259,8 +259,18 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);
     if extended
-        (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-        return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+        try
+            @info "Running emerrors"
+            (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
+            return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+        catch err
+            if isa(err, SingularException)
+                @warn "emerrors failed to run. Re-check fitting. Returning EMResults"
+                return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+            else
+                rethrow()
+            end
+        end
     else
         return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
     end
