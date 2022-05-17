@@ -99,7 +99,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     end
     
     if record
-        return (-lik, Q[:,:,1:length(c1)])
+        return -lik, Q[:,:,1:length(c1)]
     else
         return -lik
     end
@@ -113,13 +113,42 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
 end
 
 """
-Function for EM to allow params to vary from -inf to inf
+Q Learning likelihood function for non-optimization usage, e.g. just computing the likelihood for a particular set of parameters
 """
-function qlik_em(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
-    αnorm = 0.5 + 0.5 * erf(α / sqrt(2))
-    γ2norm = 0.5 + 0.5 * erf(γ2 / sqrt(2))
-    retain_belief_norm = 0.5 + 0.5 * erf(retain_belief / sqrt(2))
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2norm, retain_belief_norm, αnorm, rewscaled, add_leaf, record)
+function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, rewscaled=false, add_leaf=true, record=false)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, α, rewscaled, add_leaf, record)
+end
+
+"""
+Q-Learning likelihood function using parameters from an existing EM run
+
+Can pass in extra parameters with `params`: these will override the EM results
+
+Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0)
+"""
+function qlik(data, results::T; params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+    d = Dict{Symbol, Number}()
+    # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
+    # Then everything not present the EMResults struct is left at its default value
+    for i in eachindex(results.varnames)
+        d[Symbol(results.varnames[i])] = results.betas[i]
+    end
+    if haskey(d, :α)
+        d[:α] = 0.5 + 0.5 * erf(d[:α] / sqrt(2))
+    end
+    if haskey(d, :γ2)
+        d[:γ2] = 0.5 + 0.5 * erf(d[:γ2] / sqrt(2))
+    end
+    if haskey(d, :retain_belief)
+        d[:retain_belief] = 0.5 + 0.5 * erf(d[:retain_belief] / sqrt(2))
+    end
+    # Incorporate any extra parameters
+    if !isnothing(params)
+        for (k, v) in params
+            d[k] = v
+        end
+    end
+    qlik(data; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
 function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,

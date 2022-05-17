@@ -444,8 +444,43 @@ end
 
 # Probably shouldn't use this second version in the EM code
 # As julia doens't allow specialization on kw arguments?
-function hmm_lik(df, ϕ, volatility, βgo; βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., rewscaled=false, add_leaf=true, record=false)
+function hmm_lik(df, ϕ; volatility=1.0/30.0, βgo=0., βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., rewscaled=false, add_leaf=true, record=false)
     hmm_lik(df, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, record)
+end
+
+"""
+HMM likelihood function using parameters from an existing EM run
+
+Can pass in extra parameters with `params`: these will override the EM results
+
+Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0)
+"""
+function hmm_lik(data, ϕ, results::T; params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+    d = Dict{Symbol, Number}()
+    # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
+    # Then everything not present the EMResults struct is left at its default value
+    for i in eachindex(results.varnames)
+        d[Symbol(results.varnames[i])] = results.betas[i]
+    end
+    if haskey(d, :volatility)
+        d[:volatility] = 0.5 + 0.5 * erf(d[:volatility] / sqrt(2))
+    end
+    if haskey(d, :γ2)
+        d[:γ2] = 0.5 + 0.5 * erf(d[:γ2] / sqrt(2))
+    end
+    if haskey(d, :depletion_factor)
+        d[:depletion_factor] = 0.5 + 0.5 * erf(d[:depletion_factor] / sqrt(2))
+    end
+    if haskey(d, :retain_belief)
+        d[:retain_belief] = 0.5 + 0.5 * erf(d[:retain_belief] / sqrt(2))
+    end
+    # Incorporate any extra parameters
+    if !isnothing(params)
+        for (k, v) in params
+            d[k] = v
+        end
+    end
+    hmm_lik(data, ϕ; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
 """
