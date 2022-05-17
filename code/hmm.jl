@@ -291,7 +291,11 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
             @inbounds for t in t_ind
                 # Q = expectation over states
                 # Q .= reshape(ϕT * α, (2, 3))'
-                Qtemp .= (ϕT * α) .* depletion
+                if rewscaled
+                    Qtemp .= ((ϕT * α) .* depletion .* 2.0) .- 1.0
+                else
+                    Qtemp .= (ϕT * α) .* depletion
+                end
                 Q[1][1] = Qtemp[1]
                 Q[1][2] = Qtemp[2]
                 Q[2][1] = Qtemp[3]
