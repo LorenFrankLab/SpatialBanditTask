@@ -125,13 +125,22 @@ Q-Learning likelihood function using parameters from an existing EM run
 Can pass in extra parameters with `params`: these will override the EM results
 
 Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0)
+
+If `subject` is provided, use parameters from subject `subject`.
+Otherwise use group-level betas
 """
-function qlik(data, results::T; params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
     d = Dict{Symbol, Number}()
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
-    for i in eachindex(results.varnames)
-        d[Symbol(results.varnames[i])] = results.betas[i]
+    if subject == 0
+        for i in eachindex(results.varnames)
+            d[Symbol(results.varnames[i])] = results.betas[i]
+        end
+    else
+        for i in eachindex(results.varnames)
+            d[Symbol(results.varnames[i])] = results.x[subject, i]
+        end
     end
     if haskey(d, :α)
         d[:α] = 0.5 + 0.5 * erf(d[:α] / sqrt(2))
