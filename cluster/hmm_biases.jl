@@ -50,5 +50,5 @@ println(fn)
 results = fn(data; extended=true)
 save("../results/hmm_biases/$(fname)_$(animal).jld2", "$(fname)_$(animal)", results)
 
-results = fn(data; extended=true; rewscaled=true)
+results = fn(data; extended=true, rewscaled=true)
 save("../results/hmm_biases/$(fname)_rewscaled_$(animal).jld2", "$(fname)_rewscaled_$(animal)", results)
