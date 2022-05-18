@@ -39,7 +39,7 @@ fns = [
        ("hmm_leaf_stay_spatial_leafturn_γ2", run_hmm_leaf_stay_spatial_leafturn_γ2),
 ]
 i = parse(Int, ARGS[1])
-(fn_ind, animal_ind) = fldmod(i - 1, length(animals)) .+ 1
+(fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
 data = load_animal(animal, ".."; depletion=false)
 (fname, fn) = fns[fn_ind]

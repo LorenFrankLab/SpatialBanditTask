@@ -7,7 +7,7 @@ include("../code/util.jl")
 
 # number of contingencies
 i = parse(Int, ARGS[1])
-(fn_ind, animal_ind) = fldmod(i - 1, length(animals)) .+ 1
+(fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
 data = load_animal(animal, "..")
 println(animal)
