@@ -130,7 +130,7 @@ If `subject` is provided, use parameters from subject `subject`.
 Otherwise use group-level betas
 """
 function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
-    d = Dict{Symbol, Number}()
+    d = Dict{Symbol, Any}()
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
     if subject == 0
@@ -150,6 +150,19 @@ function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_
     end
     if haskey(d, :retain_belief)
         d[:retain_belief] = 0.5 + 0.5 * erf(d[:retain_belief] / sqrt(2))
+    end
+    # Combine array parameters
+    if haskey(d, :spatial_1)
+        d[:spatial_bias] = [d[:spatial_1], d[:spatial_2], d[:spatial_3]]
+        delete!(d, :spatial_1)
+        delete!(d, :spatial_2)
+        delete!(d, :spatial_3)
+    end
+    if haskey(d, :leaf_spatial_1)
+        d[:leaf_spatial_bias] = [d[:leaf_spatial_1], d[:leaf_spatial_2], d[:leaf_spatial_3]]
+        delete!(d, :leaf_spatial_1)
+        delete!(d, :leaf_spatial_2)
+        delete!(d, :leaf_spatial_3)
     end
     # Incorporate any extra parameters
     if !isnothing(params)
