@@ -320,26 +320,26 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         k1 = mod1(fld1(i,81), 3)
                         k2 = mod1(fld1(i,243), 3)
                         p11 = reward_probs[i1, 1]
-                            p12 = reward_probs[i2, 2]
-                                p21 = reward_probs[j1, 3]
-                                    p22 = reward_probs[j2, 4]
-                                        p31 = reward_probs[k1, 5]
+                        p12 = reward_probs[i2, 2]
+                        p21 = reward_probs[j1, 3]
+                        p22 = reward_probs[j2, 4]
+                        p31 = reward_probs[k1, 5]
                         p32 = reward_probs[k2, 6]
                         Q[1][1] = [0.2, 0.5, 0.8][i1] * depletion[1]
                         Q[1][2] = [0.2, 0.5, 0.8][i2] * depletion[2]
                         Q[2][1] = [0.2, 0.5, 0.8][j1] * depletion[3]
                         Q[2][2] = [0.2, 0.5, 0.8][j2] * depletion[4]
-                                        Q[3][1] = [0.2, 0.5, 0.8][k1] * depletion[5]
-                                            Q[3][2] = [0.2, 0.5, 0.8][k2] * depletion[6]
+                        Q[3][1] = [0.2, 0.5, 0.8][k1] * depletion[5]
+                        Q[3][2] = [0.2, 0.5, 0.8][k2] * depletion[6]
 
                         state_probs[i] = p11 * p12 * p21 * p22 * p31 * p32
-                        
-                                            hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+    
+                        hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
                         stem_1_choice_probs[i] = Qstem[1] - logsumexp(Qstem)
                         stem_2_choice_probs[i] = Qstem[2] - logsumexp(Qstem)
                         stem_3_choice_probs[i] = Qstem[3] - logsumexp(Qstem)
-                                            if (add_leaf && (prevs != stemchoice[t]))
-                                                hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
+                        if (add_leaf && (prevs != stemchoice[t]))
+                            hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
                             leaf_1_choice_probs[i] = Qleaf[1] - logsumexp(Qleaf)
                             leaf_2_choice_probs[i] = Qleaf[2] - logsumexp(Qleaf)
                         end
