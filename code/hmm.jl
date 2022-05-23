@@ -133,39 +133,14 @@ function hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, tu
     # spatial bias
     # If-else was providing a speedup, may be fixed with views?
     
-    if (prevs == 1)
-        Qstem[2] += turn_bias
-        Qstem[2] += spatial_bias[1]
-    elseif (prevs == 2)
-        Qstem[3] += turn_bias
-        Qstem[3] += spatial_bias[2]
-    elseif (prevs == 3)
-        Qstem[1] += turn_bias
-        Qstem[1] += spatial_bias[3]
+    if (prevs > 0)
+        Qstem[mod1(prevs + 1, 3)] += turn_bias
+        Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs]
     end
 
     # stay bias
-    if (prevs == 1)
-        # Qstem[prevs] = βstay * Q[prevs][3-prevl] + stay_bias
-        if (prevl == 1)
-            Qstem[1] = βstay * (Q[1][2] + γ2 * Q[1][1]) + stay_bias
-        else
-            # Qstem[prevs] = βstay * Q[prevs][1] + stay_bias
-            Qstem[1] = βstay * (Q[1][1] + γ2 * Q[1][2]) + stay_bias
-        end
-        # Qeff[prevs] = βstay .* Qeff[prevs] .+ stay_bias
-    elseif (prevs == 2)
-        if (prevl == 1)
-            Qstem[2] = βstay * (Q[2][2] + γ2 * Q[2][1]) + stay_bias
-        else
-            Qstem[2] = βstay * (Q[2][1] + γ2 * Q[2][2]) + stay_bias
-        end
-    elseif (prevs == 3)
-        if (prevl == 1)
-            Qstem[3] = βstay * (Q[3][2] + γ2 * Q[3][1]) + stay_bias
-        else
-            Qstem[3] = βstay * (Q[3][1] + γ2 * Q[3][2]) + stay_bias
-        end
+    if (prevs > 0)
+        Qstem[prevs] = βstay * ((1 - γ2) * Q[prevs][3 - prevl] + γ2 * Q[prevs][prevl]) + stay_bias
     end
 end
 
@@ -175,13 +150,7 @@ function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_
     # Add turn bias
     Qleaf[1] += leaf_turn_bias
     # Add per-stem turn biases
-    if (stemchoice == 1)
-        Qleaf[1] += leaf_spatial_bias[1]
-    elseif (stemchoice == 2)
-        Qleaf[1] += leaf_spatial_bias[2]
-    else
-        Qleaf[1] += leaf_spatial_bias[3]
-    end
+    Qleaf[1] += leaf_spatial_bias[stemchoice]
     Qleaf .= Qleaf .* βleaf
 end
 
@@ -290,11 +259,13 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
             depletion .= 1
             @inbounds for t in t_ind
                 # Q = expectation over states
-                # Q .= reshape(ϕT * α, (2, 3))'
                 if rewscaled
-                    Qtemp .= ((ϕT * α) .* depletion .* 2.0) .- 1.0
+                    mul!(Qtemp, ϕT, α)
+                    Qtemp .*= depletion .* 2.0
+                    Qtemp .-= 1.0
                 else
-                    Qtemp .= (ϕT * α) .* depletion
+                    mul!(Qtemp, ϕT, α)
+                    Qtemp .*= depletion
                 end
                 Q[1][1] = Qtemp[1]
                 Q[1][2] = Qtemp[2]
@@ -395,7 +366,8 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 end
 
                 # Update state prediction
-                α .= T * α
+                mul!(αtemp, T, α)
+                α .= αtemp
 
                 # Does the depletion matter at all? Or does it get normalized out?
                 # ϕ_depleted = ϕ .* repeat(depletion, 1, 72)'
@@ -409,19 +381,7 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
 
                 if (depletion_factor < 1.0)
                     if (prevs == stemchoice[t])
-                        if (leaf[t] == 1)
-                            depletion[1] *= depletion_factor
-                        elseif (leaf[t] == 2)
-                            depletion[2] *= depletion_factor
-                        elseif (leaf[t] == 3)
-                            depletion[3] *= depletion_factor
-                        elseif (leaf[t] == 4)
-                            depletion[4] *= depletion_factor
-                        elseif (leaf[t] == 5)
-                            depletion[5] *= depletion_factor
-                        else
-                            depletion[6] *= depletion_factor
-                        end
+                        depletion[leaf[t]] *= depletion_factor
                     else
                         depletion .= 1
                     end
