@@ -206,6 +206,7 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
     if record
         Q_record = zeros(ntrials, 6)
         Qstem_record = zeros(ntrials, 3)
+        Qleaf_record = zeros(ntrials, 2)
         state_entropy = zeros(ntrials)
         reward_entropy = zeros(ntrials)
         stem_1_p = zeros(ntrials)
@@ -280,6 +281,7 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                     lik += Qleaf[leafchoice[t]] - logsumexp(Qleaf)
                 end
 
+                # Everything below is just for meta-info on decision variables
                 if record
                     stem_1_p[i] = exp(Qstem[1] - logsumexp(Qstem))
                     stem_2_p[i] = exp(Qstem[2] - logsumexp(Qstem))
@@ -290,6 +292,8 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                     end
 
                     Q_record[i, :] .= Qtemp
+                    Qstem_record[i, :] .= Qstem
+                    Qleaf_record[i, :] .= Qleaf
                     state_entropy[i] = -sum(α .* log.(α))
 
                     # First, find the probability of each leaf being .2/.5/.8
@@ -302,48 +306,42 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         ])
                     reward_entropy[i] = mean([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
 
-                    state = 1
                     state_probs = zeros(729)
                     stem_1_choice_probs = zeros(729)
                     stem_2_choice_probs = zeros(729)
                     stem_3_choice_probs = zeros(729)
                     leaf_1_choice_probs = zeros(729)
                     leaf_2_choice_probs = zeros(729)
-                    for i1 in 1:3
+                    for i in 1:729
+                        i1 = mod1(i, 3)
+                        i2 = mod1(fld1(i,3), 3)
+                        j1 = mod1(fld1(i,9), 3)
+                        j2 = mod1(fld1(i,27), 3)
+                        k1 = mod1(fld1(i,81), 3)
+                        k2 = mod1(fld1(i,243), 3)
                         p11 = reward_probs[i1, 1]
-                        Q[1][1] = [0.2, 0.5, 0.8][i1] * depletion[1]
-                        for i2 in 1:3
                             p12 = reward_probs[i2, 2]
-                            Q[1][2] = [0.2, 0.5, 0.8][i2] * depletion[2]
-                            for j1 in 1:3
                                 p21 = reward_probs[j1, 3]
-                                Q[2][1] = [0.2, 0.5, 0.8][j1] * depletion[3]
-                                for j2 in 1:3
                                     p22 = reward_probs[j2, 4]
-                                    Q[2][2] = [0.2, 0.5, 0.8][j2] * depletion[4]
-                                    for k1 in 1:3
                                         p31 = reward_probs[k1, 5]
+                        p32 = reward_probs[k2, 6]
+                        Q[1][1] = [0.2, 0.5, 0.8][i1] * depletion[1]
+                        Q[1][2] = [0.2, 0.5, 0.8][i2] * depletion[2]
+                        Q[2][1] = [0.2, 0.5, 0.8][j1] * depletion[3]
+                        Q[2][2] = [0.2, 0.5, 0.8][j2] * depletion[4]
                                         Q[3][1] = [0.2, 0.5, 0.8][k1] * depletion[5]
-                                        for k2 in 1:3
-                                            p32 = reward_probs[k2, 6]
                                             Q[3][2] = [0.2, 0.5, 0.8][k2] * depletion[6]
 
-                                            state_probs[state] = p11 * p12 * p21 * p22 * p31 * p32
+                        state_probs[i] = p11 * p12 * p21 * p22 * p31 * p32
                         
                                             hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
-                                            stem_1_choice_probs[state] = Qstem[1] - logsumexp(Qstem)
-                                            stem_2_choice_probs[state] = Qstem[2] - logsumexp(Qstem)
-                                            stem_3_choice_probs[state] = Qstem[3] - logsumexp(Qstem)
+                        stem_1_choice_probs[i] = Qstem[1] - logsumexp(Qstem)
+                        stem_2_choice_probs[i] = Qstem[2] - logsumexp(Qstem)
+                        stem_3_choice_probs[i] = Qstem[3] - logsumexp(Qstem)
                                             if (add_leaf && (prevs != stemchoice[t]))
                                                 hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
-                                                leaf_1_choice_probs[state] = Qleaf[1] - logsumexp(Qleaf)
-                                                leaf_2_choice_probs[state] = Qleaf[2] - logsumexp(Qleaf)
-                                            end
-                                            state += 1
-                                        end
-                                    end
-                                end
-                            end
+                            leaf_1_choice_probs[i] = Qleaf[1] - logsumexp(Qleaf)
+                            leaf_2_choice_probs[i] = Qleaf[2] - logsumexp(Qleaf)
                         end
                     end
                     exp_stem_1_choice_probs = exp.(stem_1_choice_probs)
@@ -396,7 +394,61 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
     end
 
     if record
-        return -lik, Q_record, Qstem_record, state_entropy, reward_entropy, stem_1_p, stem_2_p, stem_3_p, leaf_1_p, leaf_2_p, stem_1_var, stem_2_var, stem_3_var, leaf_1_var, leaf_2_var
+        # Construct a dataframe of all recorded Q-values, choice probabilities, etc
+        record_df = DataFrame(
+            # Base Q values
+            Q1 = Q_record[:,1],
+            Q2 = Q_record[:,2],
+            Q3 = Q_record[:,3],
+            Q4 = Q_record[:,4],
+            Q5 = Q_record[:,5],
+            Q6 = Q_record[:,6],
+            # Stem values, incorporating biases
+            Qstem1 = Qstem_record[:,1],
+            Qstem2 = Qstem_record[:,2],
+            Qstem3 = Qstem_record[:,3],
+            # Leaf values, incorporating biases
+            Qleaf1 = Qleaf_record[:,1],
+            Qleaf2 = Qleaf_record[:,2],
+            # Entropy of belief state
+            state_entropy = state_entropy,
+            # Entropy of reward distribution
+            reward_entropy = reward_entropy,
+            # Model probabilities of choosing each stem and leaf
+            stem_1_p = stem_1_p,
+            stem_2_p = stem_2_p,
+            stem_3_p = stem_3_p,
+            leaf_1_p = leaf_1_p,
+            leaf_2_p = leaf_2_p,
+            # Variance of choice probabilities, based on HMM state distribution
+            stem_1_var = stem_1_var,
+            stem_2_var = stem_2_var,
+            stem_3_var = stem_3_var,
+            leaf_1_var = leaf_1_var,
+            leaf_2_var = leaf_2_var,
+        ) 
+        record_df[!, :stemchoice_p] .= 0.0
+        record_df[!, :leafchoice_p] .= 0.0
+        record_df[!, :stemchoice_var] .= 0.0
+        record_df[!, :leafchoice_var] .= 0.0
+        # Label trials with probability of eventual choice
+        for i in 1:nrow(record_df)
+            s = df.stemchoice[i]
+            record_df[i, :stemchoice_p] = record_df[i, Symbol("stem_$(s)_p")]
+            record_df[i, :stemchoice_var] = record_df[i, Symbol("stem_$(s)_var")]
+            l = df.leafchoice[i]
+            record_df[i, :leafchoice_p] = record_df[i, Symbol("leaf_$(l)_p")]
+            record_df[i, :leafchoice_var] = record_df[i, Symbol("leaf_$(l)_var")]
+        end
+        # Label trials with probability of staying
+        record_df[!, :stemstay_p] .= 0.0
+        record_df[!, :stemstay_var] .= 0.0
+        for i in 2:nrow(record_df)
+            s = df.stemchoice[i-1]
+            record_df[i, :stemstay_p] = record_df[i, Symbol("stem_$(s)_p")]
+            record_df[i, :stemstay_var] = record_df[i, Symbol("stem_$(s)_var")]
+        end
+        return -lik, record_df
     else
         return -lik
     end
