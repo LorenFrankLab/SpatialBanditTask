@@ -1,1 +1,1 @@
-sbatch --array=1-180 ./q_biases.sh
+sbatch --array=1-220 ./q_biases.sh

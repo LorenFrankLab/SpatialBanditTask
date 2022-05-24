@@ -19,6 +19,8 @@ fns = [
        ("hmm_leaf_stay_retainbelief", run_hmm_leaf_stay_retainbelief),
        ("hmm_leaf_stay_turn", run_hmm_leaf_stay_turn),
        ("hmm_leaf_stay_spatial", run_hmm_leaf_stay_spatial),
+       ("hmm_leaf_stay_leafturn", run_hmm_leaf_stay_leafturn),
+       ("hmm_leaf_stay_leafspatial", run_hmm_leaf_stay_leafspatial),
        ("hmm_leaf_stay_turn_leafspatial", run_hmm_leaf_stay_turn_leafspatial),
        ("hmm_leaf_stay_turn_leafturn", run_hmm_leaf_stay_turn_leafturn),
        ("hmm_leaf_stay_spatial_leafspatial", run_hmm_leaf_stay_spatial_leafspatial),
@@ -33,6 +35,8 @@ fns = [
 
        ("hmm_leaf_stay_turn_γ2", run_hmm_leaf_stay_turn_γ2),
        ("hmm_leaf_stay_spatial_γ2", run_hmm_leaf_stay_spatial_γ2),
+       ("hmm_leaf_stay_leafturn_γ2", run_hmm_leaf_stay_leafturn_γ2),
+       ("hmm_leaf_stay_leafspatial_γ2", run_hmm_leaf_stay_leafspatial_γ2),
        ("hmm_leaf_stay_turn_leafspatial_γ2", run_hmm_leaf_stay_turn_leafspatial_γ2),
        ("hmm_leaf_stay_turn_leafturn_γ2", run_hmm_leaf_stay_turn_leafturn_γ2),
        ("hmm_leaf_stay_spatial_leafspatial_γ2", run_hmm_leaf_stay_spatial_leafspatial_γ2),
