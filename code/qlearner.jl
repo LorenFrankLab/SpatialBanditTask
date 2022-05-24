@@ -38,17 +38,17 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     prevl::Int = 0 #leaf
 
     Q = zeros(U,3,2,length(c1)+1)
-    Qeff = zeros(U,3,2,length(c1)+1)
+    # Qeff = zeros(U,3,2,length(c1)+1)
     Qstem = zeros(U,3,1)
     Qleaf = zeros(U,2)
     if rewscaled
         Q .= (2.0 .* initial_Q) .- 1.0
-        Qeff .= (2.0 .* initial_Q) .- 1.0
+        # Qeff .= (2.0 .* initial_Q) .- 1.0
         Qstem .= (2.0 .* initial_Q) .- 1.0
         Qleaf .= (2.0 .* initial_Q) .- 1.0
     else
         Q .= initial_Q
-        Qeff .= initial_Q
+        # Qeff .= initial_Q
         Qstem .= initial_Q
         Qleaf .= initial_Q
     end
@@ -65,18 +65,20 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             prevs = 0
             prevl = 0
         end
-        Qeff[:,:,i]=Q[:,:,i]
+        # Qeff[:,:,i]=Q[:,:,i]
 
         # this is the (scaled) value of switching to each alternative stem
         # mean averages over both leaves
-        Qstem .= βgo .* mean(Q[:,:,i],dims=2)
+        Qstem[1, 1] = mean(view(Q, 1, :, i)) * βgo
+        Qstem[2, 1] = mean(view(Q, 2, :, i)) * βgo
+        Qstem[3, 1] = mean(view(Q, 3, :, i)) * βgo
 
         # spatial bias
         # 1 -> 2, 2->3, 3->1
         if prevs > 0
             other_stem = ((prevs + 3) % 3) + 1
             Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
-            Qeff[other_stem,:,i] = Qeff[other_stem,:,i] .+ spatial_bias[prevs] .+ turn_bias
+            # Qeff[other_stem,:,i] = Qeff[other_stem,:,i] .+ spatial_bias[prevs] .+ turn_bias
         end
 
 
@@ -84,21 +86,22 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         # uses only the value of the next leaf
         # plus the bias toward staying
         if (prevs > 0)
-            Qstem[prevs] = βstay * (Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
-            Qeff[prevs,:,i] = βstay .* Qeff[prevs,:,i] .+ stay_bias
+            Qstem[prevs] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
+            # Qeff[prevs,:,i] = βstay .* Qeff[prevs,:,i] .+ stay_bias
         end
 
         # log likelihood of stem choice (log of logistic)
-        lik += Qstem[c1[i]] - logsumexp(Qstem)
+        ll = Qstem[c1[i]] - logsumexp(Qstem)
+        lik += ll
         if ((i>1) && c1[i]!=c1[i-1])
-            lik_go+=Qstem[c1[i]] - logsumexp(Qstem)
+            lik_go += ll
         else
-            lik_stay+=Qstem[c1[i]] - logsumexp(Qstem)
+            lik_stay += ll
         end
 
         ## Leaf
         if ((prevs != c1[i]) && add_leaf)
-            Qleaf .= Q[c1[i], :, i]
+            Qleaf .= view(Q, c1[i], :, i)
             # Add leaf bias
             Qleaf[1] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
             # lik += Qeff[c1[i]] - logsumexp(Qeff[setdiff(1:3,prevs)])
@@ -108,7 +111,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         end
 
         # learn about the chosen leaf
-        Q[:,:,i+1] = Q[:,:,i]
+        Q[:,:,i+1] .= view(Q, :, :, i)
         Q[c1[i],c2[i],i+1] = (1-α) * Q[c1[i],c2[i],i] + α * r[i]
 
         prevs = c1[i]
