@@ -80,7 +80,7 @@ println(animal)
 println(fn)
 
 results = fn(data; extended=true)
-save("../results/hmm_biases_depletion/$(fname)_$(animal).jld2", "$(fname)_$(animal)", results)
+save("../results/hmm_biases_depletion/$(fname)_$(animal).jld2", "$(fname)_$(animal)", results; compress=true)
 
 results = fn(data; extended=true, rewscaled=true)
-save("../results/hmm_biases_depletion/$(fname)_rewscaled_$(animal).jld2", "$(fname)_rewscaled_$(animal)", results)
+save("../results/hmm_biases_depletion/$(fname)_rewscaled_$(animal).jld2", "$(fname)_rewscaled_$(animal)", results; compress=true)
