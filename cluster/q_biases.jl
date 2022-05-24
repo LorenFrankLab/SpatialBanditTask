@@ -1,5 +1,7 @@
 using StatsPlots
 using FileIO
+using JLD2
+using CodecZlib
 using EM
 include("../code/qlearner.jl")
 include("../code/util.jl")
