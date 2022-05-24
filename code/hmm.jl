@@ -159,6 +159,8 @@ hmm_lik
 
 HMM Likelihood function
 
+ϕ: nstates x 6 emission probabilities
+volatility<float>: Assumed chance of a switch
 βgo<float>: Scaling for alternate stems
 βstay<float>: Scaling for current stem
 βleaf<float>: Beta weight for leaf choice softmax
@@ -166,16 +168,16 @@ turn_bias<float>: Offset added to (leftward?) choice
 spatial_bias<[float, float, float]>: Per-stem offset added to (leftward?) choice
 leaf_turn_bias<float>: Offset added to 'first' leaf on entering a new stem
 leaf_spatial_bias<[float, float, float]>: Per-stem leaf turn bias
-volatility<float>: Assumed chance of a switch
-γ2<float>: Discount on timestep 2 for other leaf
+γ2<float>: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
 depletion_factor<float>: Fraction of value retained when remaining at the same leaf for multiple trials
-ϕ: nstates x 6 emission probabilities
+retain_belief<float>: Fraction of belief state carried over between sessions
+rewscaled<bool>: If true, reward is +1/-1 instead of 0/1
 add_leaf<bool>: Whether to include likelihood for the leaf choice on a stem switch
 record<bool>: Whether to return a record of estimated Q-values and entropy measures
 
 Returns:
     negative likelihood
-If 'return':
+If 'record':
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
     Qstem: Stem Q-values at each trial, including biases
     state_entropy
@@ -520,18 +522,22 @@ end
 
 """
 run_hmm
+full: Whether to model full covariance matrix
+extended: Try to calculate p-values and group-level covariance
+quiet: Silence progress
 
+ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
 βleaf: Beta weight for leaf choice softmax
 stay_bias: Offset added to staying at current stem
 turn_bias: Offset added to (leftward?) choice
 spatial_bias: Per-stem offset added to (leftward?) choice
 leaf_turn_bias: Offset added to 'first' leaf on entering a new stem
 leaf_spatial_bias: Per-stem leaf turn bias
-γ2: Discount on timestep 2 for other leaf
+γ2: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
 depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
 retain_belief: Fraction of belief in HMM state to retain between sessions
+rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
-ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
 """
 function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     ϕ=nothing,

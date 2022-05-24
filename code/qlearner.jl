@@ -4,21 +4,32 @@ using SpecialFunctions
 using EM
 # this is the likelihood function for the actual model
 
+"""
+qlik
+
+Q-Learner Likelihood function
+
+βgo<float>: Scaling for alternate stems
+βstay<float>: Scaling for current stem
+βleaf<float>: Beta weight for leaf choice softmax
+turn_bias<float>: Offset added to (leftward?) choice
+spatial_bias<[float, float, float]>: Per-stem offset added to (leftward?) choice
+leaf_turn_bias<float>: Offset added to 'first' leaf on entering a new stem
+leaf_spatial_bias<[float, float, float]>: Per-stem leaf turn bias
+γ2<float>: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
+retain_belief<float>: Fraction of belief state carried over between sessions
+initial_Q<float>: Value between 0 and 1 (will be rescaled) to initialize Q-values with at start of each session
+α<float>: Learning rate
+rewscaled<bool>: If true, reward is +1/-1 instead of 0/1
+add_leaf<bool>: Whether to include likelihood for the leaf choice on a stem switch
+record<bool>: Whether to return a record of estimated Q-values and entropy measures
+
+Returns:
+    negative likelihood
+If 'record':
+    Q: Inferred leaf Q-values at the start of each trial, ignoring biases
+"""
 function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
-    """
-    learn_q: If true, learn Q values trial by trial.
-             If false, use provided data[trial, :q1], data[trial, :q2] etc
-    mode: "lik": Return neg likelihood
-          "sim": Return Q values
-    mode: 
-
-    Q is the baseline Q value estimate for each state
-    Qeff is Q plus (potentially):
-        - Spatial bias
-        - Stay bias
-        - 
-
-    """
     # mode = "likelihood"
 
     # rename the variables for easy acccess
@@ -196,6 +207,25 @@ function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_
     qlik(data; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
+"""
+run_q
+full: Whether to model full covariance matrix
+extended: Try to calculate p-values and group-level covariance
+quiet: Silence progress
+
+βleaf: Beta weight for leaf choice softmax
+stay_bias: Offset added to staying at current stem
+turn_bias: Offset added to (leftward?) choice
+spatial_bias: Per-stem offset added to (leftward?) choice
+leaf_turn_bias: Offset added to 'first' leaf on entering a new stem
+leaf_spatial_bias: Per-stem leaf turn bias
+γ2: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
+depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
+retain_belief: Fraction of Q-value estimates to retain between sessions
+initial_Q: Allow Q-values to initialize to a value above minimum
+rewscaled: If true, reward is +1/-1 instead of 0/1
+add_leaf: Whether to include likelihood for the leaf choice on a stem switch
+"""
 function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     add_βleaf=false,
     add_stay_bias=false,
@@ -203,11 +233,11 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_spatial_bias=false,
     add_leaf_turn_bias=false,
     add_leaf_spatial_bias=false,
-    add_leaf=true,
     add_γ2=false,
     add_retain_belief=false,
     add_initial_Q=false,
     rewscaled=false,
+    add_leaf=true,
     )
 
     data = copy(df)
