@@ -196,7 +196,7 @@ function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_
     qlik(data; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
-function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
+function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -344,7 +344,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false,
         return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, rewscaled, add_leaf, false)
     end
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);
+    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
     if extended
         try
             @info "Running emerrors"

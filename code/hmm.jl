@@ -533,7 +533,7 @@ retain_belief: Fraction of belief in HMM state to retain between sessions
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
 """
-function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
+function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     ϕ=nothing,
     add_βleaf=false,
     add_stay_bias=false,
@@ -681,7 +681,7 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false,
         return hmm_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, false)
     end
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter);
+    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
     if extended
         try
             @info "Running emerrors"
