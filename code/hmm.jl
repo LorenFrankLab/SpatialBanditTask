@@ -306,7 +306,7 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         sum((ϕ .== .5) .* α; dims=1)
                         sum((ϕ .== .8) .* α; dims=1)
                         ])
-                    reward_entropy[i] = mean([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
+                    reward_entropy[i] = sum([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
 
                     state_probs = zeros(729)
                     stem_1_choice_probs = zeros(729)
