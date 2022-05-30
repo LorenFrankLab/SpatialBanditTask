@@ -127,21 +127,18 @@ import Base.length
 length(df::U) where U <: DataFrame = size(df, 1)
 length(df::U) where U <: SubDataFrame = size(df, 1)
 
-function hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+function hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
     Qstem .= βgo .* mean.(Q)
-
-    # spatial bias
-    # If-else was providing a speedup, may be fixed with views?
     
-    if (prevs > 0)
-        Qstem[mod1(prevs + 1, 3)] += turn_bias
-        Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs]
-    end
-
     # stay bias
     if (prevs > 0)
         Qstem[prevs] = βstay * ((1 - γ2) * Q[prevs][3 - prevl] + γ2 * Q[prevs][prevl]) + stay_bias
     end
+end
+
+function hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+    Qstem[mod1(prevs + 1, 3)] += turn_bias
+    Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs]
 end
 
 function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_spatial_bias)
@@ -183,7 +180,7 @@ If 'record':
     state_entropy
     reward_entropy
 """
-function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     nstates = size(ϕ, 1)
     ntrials = length(df)
 
@@ -276,8 +273,27 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 Q[2][2] = Qtemp[4]
                 Q[3][1] = Qtemp[5]
                 Q[3][2] = Qtemp[6]
-                hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
-                lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
+                # if (prevs > 0) & (prevs != stemchoice[t])
+                hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
+                if (prevs > 0)
+                    # Probability of stay/switch
+                    if delay_turn_bias
+                        pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                        hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+                    else
+                        hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+                        pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                    end
+                    if prevs == stemchoice[t]
+                        lik += log(pstay)
+                    else
+                        lik += log(1 - pstay)
+                        lik += Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                    end
+                else
+                    lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
+                end
+
                 if (add_leaf && (prevs != stemchoice[t]))
                     hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
                     lik += Qleaf[leafchoice[t]] - logsumexp(Qleaf)
@@ -336,7 +352,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
 
                         state_probs[i] = p11 * p12 * p21 * p22 * p31 * p32
     
-                        hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, turn_bias, spatial_bias, γ2)
+                        hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
+                        hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+                        @warn "Turn bias not in line w/ stay/go separation"
                         stem_1_choice_probs[i] = Qstem[1] - logsumexp(Qstem)
                         stem_2_choice_probs[i] = Qstem[2] - logsumexp(Qstem)
                         stem_3_choice_probs[i] = Qstem[3] - logsumexp(Qstem)
@@ -458,8 +476,8 @@ end
 
 # Probably shouldn't use this second version in the EM code
 # As julia doens't allow specialization on kw arguments?
-function hmm_lik(df, ϕ; volatility=1.0/30.0, βgo=0., βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., rewscaled=false, add_leaf=true, record=false)
-    hmm_lik(df, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, record)
+function hmm_lik(df, ϕ; volatility=1.0/30.0, βgo=0., βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    hmm_lik(df, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -472,7 +490,7 @@ Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0
 If `subject` is provided, use parameters from subject `subject`.
 Otherwise use group-level betas
 """
-function hmm_lik(data, ϕ, results::T; subject=0, params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+function hmm_lik(data, ϕ, results::T; subject=0, params=nothing, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
     d = Dict{Symbol, Any}()
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
@@ -517,7 +535,7 @@ function hmm_lik(data, ϕ, results::T; subject=0, params=nothing, rewscaled=fals
             d[k] = v
         end
     end
-    hmm_lik(data, ϕ; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
+    hmm_lik(data, ϕ; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
 """
@@ -550,6 +568,7 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     add_γ2=false,
     add_depletion_factor=false,
     add_retain_belief=false,
+    delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
     )
@@ -684,7 +703,7 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
         end
 
 
-        return hmm_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, rewscaled, add_leaf, false)
+        return hmm_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);

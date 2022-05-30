@@ -1,1 +1,1 @@
-sbatch --array=1-160 ./hmm_biases.sh
+sbatch --array=1-240 ./hmm_biases.sh
