@@ -72,3 +72,6 @@ save("../results/q_biases/$(fname)_$(animal).jld2", "$(fname)_$(animal)", result
 
 results = fn(data; extended=true, rewscaled=true)
 save("../results/q_biases/$(fname)_rewscaled_$(animal).jld2", "$(fname)_rewscaled_$(animal)", results; compress=true)
+
+results = fn(data; extended=true, rewscaled=true, delay_turn_bias=true)
+save("../results/q_biases/$(fname)_rewscaled_delayturnbias_$(animal).jld2", "$(fname)_rewscaled_delayturnbias_$(animal)", results; compress=true)

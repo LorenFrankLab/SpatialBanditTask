@@ -29,7 +29,7 @@ Returns:
 If 'record':
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
 """
-function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     # mode = "likelihood"
 
     # rename the variables for easy acccess
@@ -84,25 +84,33 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         Qstem[2, 1] = mean(view(Q, 2, :, i)) * βgo
         Qstem[3, 1] = mean(view(Q, 3, :, i)) * βgo
 
-        # spatial bias
-        # 1 -> 2, 2->3, 3->1
         if prevs > 0
-            other_stem = ((prevs + 3) % 3) + 1
-            Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
-            # Qeff[other_stem,:,i] = Qeff[other_stem,:,i] .+ spatial_bias[prevs] .+ turn_bias
-        end
-
-
-        # this is the (scaled) value of staying with the current stem
-        # uses only the value of the next leaf
-        # plus the bias toward staying
-        if (prevs > 0)
+            # this is the (scaled) value of staying with the current stem
+            # uses only the value of the next leaf
+            # plus the bias toward staying
             Qstem[prevs] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
-            # Qeff[prevs,:,i] = βstay .* Qeff[prevs,:,i] .+ stay_bias
+            # spatial bias
+            # 1 -> 2, 2->3, 3->1
+            if delay_turn_bias
+                pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                other_stem = ((prevs + 3) % 3) + 1
+                Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
+            else
+                other_stem = ((prevs + 3) % 3) + 1
+                Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
+                pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+            end
+            if prevs == c1[i]
+                ll = log(pstay)
+            else
+                ll = log(1 - pstay)
+                ll += Qstem[c1[i]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+            end
+        else
+            ll = Qstem[c1[i]] - logsumexp(Qstem)
         end
 
         # log likelihood of stem choice (log of logistic)
-        ll = Qstem[c1[i]] - logsumexp(Qstem)
         lik += ll
         if ((i>1) && c1[i]!=c1[i-1])
             lik_go += ll
@@ -146,8 +154,8 @@ end
 """
 Q Learning likelihood function for non-optimization usage, e.g. just computing the likelihood for a particular set of parameters
 """
-function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, initial_Q=0.0, rewscaled=false, add_leaf=true, record=false)
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, rewscaled, add_leaf, record)
+function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, initial_Q=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -160,7 +168,7 @@ Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0
 If `subject` is provided, use parameters from subject `subject`.
 Otherwise use group-level betas
 """
-function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+function qlik(data, results::T; subject=0, params=nothing, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
     d = Dict{Symbol, Any}()
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
@@ -204,7 +212,7 @@ function qlik(data, results::T; subject=0, params=nothing, rewscaled=false, add_
             d[k] = v
         end
     end
-    qlik(data; rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
+    qlik(data; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
 """
@@ -236,6 +244,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_γ2=false,
     add_retain_belief=false,
     add_initial_Q=false,
+    delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
     )
@@ -371,7 +380,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         α = 0.5 + 0.5 * erf(params[i] / sqrt(2))
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, rewscaled, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
