@@ -92,13 +92,13 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             # spatial bias
             # 1 -> 2, 2->3, 3->1
             if delay_turn_bias
-                pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                pstay = exp(Qstem[prevs] - logsumexp(Qstem))  # Better results than sum(exp.())
                 other_stem = ((prevs + 3) % 3) + 1
                 Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
             else
                 other_stem = ((prevs + 3) % 3) + 1
                 Qstem[other_stem] = Qstem[other_stem] + spatial_bias[prevs] + turn_bias
-                pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                pstay = exp(Qstem[prevs] - logsumexp(Qstem))
             end
             if prevs == c1[i]
                 ll = log(pstay)

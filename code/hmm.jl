@@ -278,11 +278,11 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 if (prevs > 0)
                     # Probability of stay/switch
                     if delay_turn_bias
-                        pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                        pstay = exp(Qstem[prevs] - logsumexp(Qstem))
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
                     else
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
-                        pstay = exp(Qstem[prevs]) / sum(exp.(Qstem))
+                        pstay = exp(Qstem[prevs] - logsumexp(Qstem))
                     end
                     if prevs == stemchoice[t]
                         lik += log(pstay)
