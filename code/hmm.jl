@@ -211,6 +211,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
         stem_1_p = zeros(ntrials)
         stem_2_p = zeros(ntrials)
         stem_3_p = zeros(ntrials)
+        stem_stay_p = zeros(ntrials)
+        stem_go_turn_p = zeros(ntrials)
+        stem_turn_alone_p = zeros(ntrials)
         leaf_1_p = zeros(ntrials)
         leaf_2_p = zeros(ntrials)
         stem_1_var = zeros(ntrials)
@@ -218,7 +221,13 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
         stem_3_var = zeros(ntrials)
         leaf_1_var = zeros(ntrials)
         leaf_2_var = zeros(ntrials)
+        stem_stay_var = zeros(ntrials)
+        stem_go_turn_var = zeros(ntrials)
+        stem_turn_alone_var = zeros(ntrials)
     end
+    p_stay = 0  # keep track of these so we can use them for stem_stay_p etc
+    l_p_go_turn = 0
+    l_p_turn_alone = 0
     i = 1
 
     depletion = ones(U, 6)
@@ -273,24 +282,25 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 Q[2][2] = Qtemp[4]
                 Q[3][1] = Qtemp[5]
                 Q[3][2] = Qtemp[6]
-                # if (prevs > 0) & (prevs != stemchoice[t])
                 hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
                 if (prevs > 0)
                     # Probability of stay/switch
-                    if delay_turn_bias
-                        pstay = exp(Qstem[prevs] - logsumexp(Qstem))
+                    if delay_turn_bias  # Whether we add on the turn bias before or after we calculate stay/go
+                        p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
                     else
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
-                        pstay = exp(Qstem[prevs] - logsumexp(Qstem))
+                        p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
                     end
+                    # Now probability is either p(stay) or (1 - p(stay)) * p(left/right)
                     if prevs == stemchoice[t]
-                        lik += log(pstay)
+                        lik += log(p_stay)
                     else
-                        lik += log(1 - pstay)
-                        lik += Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                        l_p_turn_alone = Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                        l_p_go_turn = log(1 - p_stay) + l_p_turn_alone
+                        lik += l_p_go_turn
                     end
-                else
+                else  # First trial, just a three-way choice
                     lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
                 end
 
@@ -308,6 +318,14 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         leaf_1_p[i] = exp(Qleaf[1] - logsumexp(Qleaf))
                         leaf_2_p[i] = exp(Qleaf[2] - logsumexp(Qleaf))
                     end
+                    if (prevs > 0)
+                        stem_stay_p[i] = p_stay
+                        if prevs != stemchoice[t]
+                            stem_go_turn_p[i] = exp(l_p_go_turn)
+                            stem_turn_alone_p[i] = exp(l_p_turn_alone)
+                        end
+                    end
+
 
                     Q_record[i, :] .= Qtemp
                     Qstem_record[i, :] .= Qstem
@@ -328,6 +346,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                     stem_1_choice_probs = zeros(729)
                     stem_2_choice_probs = zeros(729)
                     stem_3_choice_probs = zeros(729)
+                    stem_stay_choice_probs = zeros(729)
+                    stem_go_turn_choice_probs = zeros(729)
+                    stem_turn_alone_choice_probs = zeros(729)
                     leaf_1_choice_probs = zeros(729)
                     leaf_2_choice_probs = zeros(729)
                     for i in 1:729
@@ -353,8 +374,22 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         state_probs[i] = p11 * p12 * p21 * p22 * p31 * p32
     
                         hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
-                        hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
-                        @warn "Turn bias not in line w/ stay/go separation"
+                        if (prevs > 0)
+                            # Probability of stay/switch
+                            if delay_turn_bias
+                                p_stay = exp(Qstem[prevs] - logsumexp(Qstem))  # Better results than sum(exp.())
+                                hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+                            else
+                                hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
+                                p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
+                            end
+                            stem_stay_choice_probs[i] = log(p_stay)
+                            if prevs != stemchoice[t]
+                                stem_go_turn_choice_probs[i] = log(1 - p_stay) + Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                                stem_turn_alone_choice_probs[i] = Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                            end
+                        end
+                        # Assuming a three-way choice
                         stem_1_choice_probs[i] = Qstem[1] - logsumexp(Qstem)
                         stem_2_choice_probs[i] = Qstem[2] - logsumexp(Qstem)
                         stem_3_choice_probs[i] = Qstem[3] - logsumexp(Qstem)
@@ -367,17 +402,26 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                     exp_stem_1_choice_probs = exp.(stem_1_choice_probs)
                     exp_stem_2_choice_probs = exp.(stem_2_choice_probs)
                     exp_stem_3_choice_probs = exp.(stem_3_choice_probs)
+                    exp_stem_stay_choice_probs = exp.(stem_stay_choice_probs)
+                    exp_stem_go_turn_choice_probs = exp.(stem_go_turn_choice_probs)
+                    exp_stem_turn_alone_choice_probs = exp.(stem_turn_alone_choice_probs)
                     exp_leaf_1_choice_probs = exp.(leaf_1_choice_probs)
                     exp_leaf_2_choice_probs = exp.(leaf_2_choice_probs)
                     stem_1_mu = sum(state_probs .* exp_stem_1_choice_probs)
                     stem_2_mu = sum(state_probs .* exp_stem_2_choice_probs)
                     stem_3_mu = sum(state_probs .* exp_stem_3_choice_probs)
+                    stem_stay_mu = sum(state_probs .* exp_stem_stay_choice_probs)
+                    stem_go_turn_mu = sum(state_probs .* exp_stem_go_turn_choice_probs)
+                    stem_turn_alone_mu = sum(state_probs .* exp_stem_turn_alone_choice_probs)
                     leaf_1_mu = sum(state_probs .* exp_leaf_1_choice_probs)
                     leaf_2_mu = sum(state_probs .* exp_leaf_2_choice_probs)
                     for j in 1:729
                         stem_1_var[i] += state_probs[j] * (exp_stem_1_choice_probs[j] - stem_1_mu)^2
                         stem_2_var[i] += state_probs[j] * (exp_stem_2_choice_probs[j] - stem_2_mu)^2
                         stem_3_var[i] += state_probs[j] * (exp_stem_3_choice_probs[j] - stem_3_mu)^2
+                        stem_stay_var[i] += state_probs[j] * (exp_stem_stay_choice_probs[j] - stem_stay_mu)^2
+                        stem_go_turn_var[i] += state_probs[j] * (exp_stem_go_turn_choice_probs[j] - stem_go_turn_mu)^2
+                        stem_turn_alone_var[i] += state_probs[j] * (exp_stem_turn_alone_choice_probs[j] - stem_turn_alone_mu)^2
                         leaf_1_var[i] += state_probs[j] * (exp_leaf_1_choice_probs[j] - leaf_1_mu)^2
                         leaf_2_var[i] += state_probs[j] * (exp_leaf_2_choice_probs[j] - leaf_2_mu)^2
                     end
@@ -438,35 +482,33 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
             stem_1_p = stem_1_p,
             stem_2_p = stem_2_p,
             stem_3_p = stem_3_p,
+            stem_stay_p = stem_stay_p,
+            stem_go_turn_p = stem_go_turn_p,
+            stem_turn_alone_p = stem_turn_alone_p,
             leaf_1_p = leaf_1_p,
             leaf_2_p = leaf_2_p,
             # Variance of choice probabilities, based on HMM state distribution
             stem_1_var = stem_1_var,
             stem_2_var = stem_2_var,
             stem_3_var = stem_3_var,
+            stem_stay_var = stem_stay_var,
+            stem_go_turn_var = stem_go_turn_var,
+            stem_turn_alone_var = stem_turn_alone_var,
             leaf_1_var = leaf_1_var,
             leaf_2_var = leaf_2_var,
         ) 
-        record_df[!, :stemchoice_p] .= 0.0
-        record_df[!, :leafchoice_p] .= 0.0
-        record_df[!, :stemchoice_var] .= 0.0
-        record_df[!, :leafchoice_var] .= 0.0
+        record_df[!, :stem_choice_p] .= 0.0
+        record_df[!, :leaf_choice_p] .= 0.0
+        record_df[!, :stem_choice_var] .= 0.0
+        record_df[!, :leaf_choice_var] .= 0.0
         # Label trials with probability of eventual choice
         for i in 1:nrow(record_df)
             s = df.stemchoice[i]
-            record_df[i, :stemchoice_p] = record_df[i, Symbol("stem_$(s)_p")]
-            record_df[i, :stemchoice_var] = record_df[i, Symbol("stem_$(s)_var")]
+            record_df[i, :stem_choice_p] = record_df[i, Symbol("stem_$(s)_p")]
+            record_df[i, :stem_choice_var] = record_df[i, Symbol("stem_$(s)_var")]
             l = df.leafchoice[i]
-            record_df[i, :leafchoice_p] = record_df[i, Symbol("leaf_$(l)_p")]
-            record_df[i, :leafchoice_var] = record_df[i, Symbol("leaf_$(l)_var")]
-        end
-        # Label trials with probability of staying
-        record_df[!, :stemstay_p] .= 0.0
-        record_df[!, :stemstay_var] .= 0.0
-        for i in 2:nrow(record_df)
-            s = df.stemchoice[i-1]
-            record_df[i, :stemstay_p] = record_df[i, Symbol("stem_$(s)_p")]
-            record_df[i, :stemstay_var] = record_df[i, Symbol("stem_$(s)_var")]
+            record_df[i, :leaf_choice_p] = record_df[i, Symbol("leaf_$(l)_p")]
+            record_df[i, :leaf_choice_var] = record_df[i, Symbol("leaf_$(l)_var")]
         end
         return -lik, record_df
     else
