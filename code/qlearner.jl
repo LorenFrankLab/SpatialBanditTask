@@ -49,8 +49,8 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     prevl::Int = 0 #leaf
 
     Q = zeros(U,3,2,length(c1)+1)
-    Qstem = zeros(U,3,1)
-    Qleaf = zeros(U,2)
+    Qstem = zeros(U,3,length(c1))
+    Qleaf = zeros(U,2,length(c1))
     if rewscaled
         Q .= (2.0 .* initial_Q) .- 1.0
         Qstem .= (2.0 .* initial_Q) .- 1.0
@@ -78,32 +78,32 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         # mean averages over both leaves
         # 
         # Seems to be faster breaking it up into the three calculations
-        Qstem[1, 1] = mean(view(Q, 1, :, i)) * βgo
-        Qstem[2, 1] = mean(view(Q, 2, :, i)) * βgo
-        Qstem[3, 1] = mean(view(Q, 3, :, i)) * βgo
+        Qstem[1, i] = mean(view(Q, 1, :, i)) * βgo
+        Qstem[2, i] = mean(view(Q, 2, :, i)) * βgo
+        Qstem[3, i] = mean(view(Q, 3, :, i)) * βgo
 
         if prevs > 0
             # this is the (scaled) value of staying with the current stem
             # uses only the value of the next leaf
             # plus the bias toward staying
-            Qstem[prevs] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
+            Qstem[prevs, i] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
             # spatial bias
             # 1 -> 2, 2->3, 3->1
             if delay_turn_bias  # Compute stay/go before we add a turn bias
-                pstay = exp(Qstem[prevs] - logsumexp(Qstem))  # Better results than sum(exp.())
-                Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs] + turn_bias
+                p_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))  # Better results than sum(exp.())
+                Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
             else
-                Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs] + turn_bias
-                pstay = exp(Qstem[prevs] - logsumexp(Qstem))
+                Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
+                p_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))
             end
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
-                ll = log(pstay)
+                ll = log(p_stay)
             else  # If a go trial, 1-p times the left/right turn choice
-                ll = log(1 - pstay)
-                ll += Qstem[c1[i]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                ll = log(1 - p_stay)
+                ll += Qstem[c1[i], i] - logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i))
             end
         else  # First trial, no biases and just three-way choice
-            ll = Qstem[c1[i]] - logsumexp(Qstem)
+            ll = Qstem[c1[i], i] - logsumexp(view(Qstem, :, i))
         end
 
         # log likelihood of stem choice (log of logistic)
@@ -116,11 +116,11 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
 
         ## Leaf
         if ((prevs != c1[i]) && add_leaf)
-            Qleaf .= view(Q, c1[i], :, i)
+            view(Qleaf, :, i) .= view(Q, c1[i], :, i)
             # Add leaf bias
-            Qleaf[1] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
+            Qleaf[1, i] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
             # log likelihood of leaf choice on switches only
-            lik += βleaf * Qleaf[c2[i]] - logsumexp(βleaf .* Qleaf);
+            lik += βleaf * Qleaf[c2[i], i] - logsumexp(βleaf .* view(Qleaf, :, i));
         end
 
         # learn about the chosen leaf
@@ -132,7 +132,21 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     end
     
     if record
-        return -lik, Q[:,:,1:length(c1)]
+        record_df = DataFrame(
+            # Base Q values
+            Q1 = Q[1, 1, 1:length(c1)],
+            Q2 = Q[1, 2, 1:length(c1)],
+            Q3 = Q[2, 1, 1:length(c1)],
+            Q4 = Q[2, 2, 1:length(c1)],
+            Q5 = Q[3, 1, 1:length(c1)],
+            Q6 = Q[3, 2, 1:length(c1)],
+            Qstem1 = Qstem[1, :],
+            Qstem2 = Qstem[2, :],
+            Qstem3 = Qstem[3, :],
+            Qleaf1 = Qleaf[1, :],
+            Qleaf2 = Qleaf[2, :],
+        )
+        return -lik, record_df
     else
         return -lik
     end
