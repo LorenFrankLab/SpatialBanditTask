@@ -1,31 +1,45 @@
 function results2=count_contingency(T)
+%%%
+% Returns results2
+% For each contingency where #20, #50, #80 == #321 or #411,
+% count the number of occurences of the exact contingency
+
+% Reduced contingency isn't being used
+% Nor is theo_count
+%%%
 
 %% contingency summary
 cont=T.contingency;
 cont_u=unique(cont);
 cont_hist=zeros(1,length(cont_u));
-counts=containers.Map(); %reduced
-counts2=containers.Map(); %nonreduced
+counts=containers.Map(); %reduced - based on #20, #50, #80
+counts2=containers.Map(); %nonreduced - full contingency, but only for #321 and #411
 
 for i=1:length(cont_u)
     current_cont=cont_u(i);
     current_cont_n=sum(current_cont==cont);
     
     current_cont=num2str(current_cont);
+    % Leading 0 may be dropped; check if string is too short
     if length(current_cont)<12
         current_cont=['0',current_cont];
     end
     current_cont_full=current_cont;
     
+    % Turn string "202080205080" into [20 20 80 20 50 80] (doubles)
     current_cont=[str2double(current_cont(1:2)),str2double(current_cont(3:4)),str2double(current_cont(5:6)),...
         str2double(current_cont(7:8)),str2double(current_cont(9:10)),str2double(current_cont(11:12))];
+    % Find the number of instances of '20', '50', and '80'
     current_cont=[sum(current_cont==20),sum(current_cont==50),sum(current_cont==80)];
+    % Turn into a string of 'abc' where a=#20, b=#50, c=#80
     current_cont=squeeze(char(string(current_cont)))';
     
     if ismember(current_cont,{'321','411'})
         counts2(current_cont_full)=current_cont_n;
     end
     
+    % If current set of probs is new, add a new entry.
+    % However, there may be permutations of the probabilities
     if ismember(current_cont,keys(counts))
         counts(current_cont)=counts(current_cont)+current_cont_n;
     else
