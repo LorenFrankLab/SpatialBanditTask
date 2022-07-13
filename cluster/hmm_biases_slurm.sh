@@ -12,7 +12,5 @@
 
 echo $SLURM_ARRAY_TASK_ID
 
-module load julia/1.6.0
-
 mkdir -p ../results/hmm_biases
 JULIA_NUM_THREADS=8 julia hmm_biases.jl $SLURM_ARRAY_TASK_ID
