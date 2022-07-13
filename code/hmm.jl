@@ -225,9 +225,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
         stem_go_turn_var = zeros(ntrials)
         stem_turn_alone_var = zeros(ntrials)
     end
-    p_stay = 0  # keep track of these so we can use them for stem_stay_p etc
-    l_p_go_turn = 0
-    l_p_turn_alone = 0
+    lp_stay = 0  # keep track of these so we can use them for stem_stay_p etc
+    lp_go_turn = 0
+    lp_turn_alone = 0
     i = 1
 
     depletion = ones(U, 6)
@@ -285,26 +285,30 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 hmm_lik_stem_inner!(Qstem, Q, prevs, prevl, βgo, βstay, stay_bias, γ2)
                 if (prevs > 0)
                     # Probability of stay/switch
+                    # mod1(prevs + 1, 3) and mod1(prevs + 2, 3) give us the other two stems
+                    # log(exp(Q_x) / sum(exp.(Q))) -> Q_x - logsumexp(Q)
                     if delay_turn_bias  # Whether we add on the turn bias before or after we calculate stay/go
-                        p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
+                        lp_stay = Qstem[prevs] - logsumexp(view(Qstem, :))
+                        lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)])) - logsumexp(view(Qstem, :))
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
                     else
                         hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
-                        p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
+                        lp_stay = Qstem[prevs] - logsumexp(view(Qstem, :))
+                        lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)])) - logsumexp(view(Qstem, :))
                     end
-                    # Now probability is either p(stay) or (1 - p(stay)) * p(left/right)
+                    # Now probability is either p(stay) or p(go) * p(left/right)
                     if prevs == stemchoice[t]
-                        lik += log(p_stay)
+                        lik += lp_stay
                     else
-                        l_p_turn_alone = Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
-                        l_p_go_turn = log(1 - p_stay) + l_p_turn_alone
-                        lik += l_p_go_turn
+                        lp_turn_alone = Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                        lp_go_turn = lp_go + lp_turn_alone
+                        lik += lp_go_turn
                     end
                 else  # First trial, just a three-way choice
                     lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
                 end
 
-                if (add_leaf && (prevs != stemchoice[t]))
+                if (add_leaf && (prevs != stemchoice[t]))  # If stem switch, add leaf bias
                     hmm_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
                     lik += Qleaf[leafchoice[t]] - logsumexp(Qleaf)
                 end
@@ -319,13 +323,12 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         leaf_2_p[i] = exp(Qleaf[2] - logsumexp(Qleaf))
                     end
                     if (prevs > 0)
-                        stem_stay_p[i] = p_stay
+                        stem_stay_p[i] = exp(lp_stay)
                         if prevs != stemchoice[t]
-                            stem_go_turn_p[i] = exp(l_p_go_turn)
-                            stem_turn_alone_p[i] = exp(l_p_turn_alone)
+                            stem_go_turn_p[i] = exp(lp_go_turn)
+                            stem_turn_alone_p[i] = exp(lp_turn_alone)
                         end
                     end
-
 
                     Q_record[i, :] .= Qtemp
                     Qstem_record[i, :] .= Qstem
@@ -377,15 +380,17 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         if (prevs > 0)
                             # Probability of stay/switch
                             if delay_turn_bias
-                                p_stay = exp(Qstem[prevs] - logsumexp(Qstem))  # Better results than sum(exp.())
+                                lp_stay = Qstem[prevs] - logsumexp(view(Qstem, :))
+                                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)])) - logsumexp(view(Qstem, :))
                                 hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
                             else
                                 hmm_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
-                                p_stay = exp(Qstem[prevs] - logsumexp(Qstem))
+                                lp_stay = Qstem[prevs] - logsumexp(view(Qstem, :))
+                                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)])) - logsumexp(view(Qstem, :))
                             end
-                            stem_stay_choice_probs[i] = log(p_stay)
+                            stem_stay_choice_probs[i] = lp_stay
                             if prevs != stemchoice[t]
-                                stem_go_turn_choice_probs[i] = log(1 - p_stay) + Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
+                                stem_go_turn_choice_probs[i] = lp_go + Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
                                 stem_turn_alone_choice_probs[i] = Qstem[stemchoice[t]] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)]])
                             end
                         end
