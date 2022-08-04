@@ -2,6 +2,6 @@
 set -euo pipefail
 
 mkdir -p ../results/hmm_biases
-for i in {1..160}; do
+for i in {1..190}; do
     JULIA_NUM_THREADS=8 julia hmm_biases.jl $i
 done 

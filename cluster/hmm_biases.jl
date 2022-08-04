@@ -57,6 +57,14 @@ fns = [
 ("hmm_leaf_stay_turn_leafturn_γ2", run_hmm_leaf_stay_turn_leafturn_γ2),
 ("hmm_leaf_stay_spatial_leafspatial_γ2", run_hmm_leaf_stay_spatial_leafspatial_γ2),
 ("hmm_leaf_stay_spatial_leafturn_γ2", run_hmm_leaf_stay_spatial_leafturn_γ2),
+
+# Test against depletion code
+("hmm_leaf_stay_turn_depletion", run_hmm_leaf_stay_turn_depletion),
+("hmm_leaf_stay_spatial_depletion", run_hmm_leaf_stay_spatial_depletion),
+("hmm_leaf_stay_turn_leafspatial_depletion", run_hmm_leaf_stay_turn_leafspatial_depletion),
+("hmm_leaf_stay_turn_leafturn_depletion", run_hmm_leaf_stay_turn_leafturn_depletion),
+("hmm_leaf_stay_spatial_leafspatial_depletion", run_hmm_leaf_stay_spatial_leafspatial_depletion),
+("hmm_leaf_stay_spatial_leafturn_depletion", run_hmm_leaf_stay_spatial_leafturn_depletion),
 ]
 base_dir = "../results/hmm_biases"
 i = parse(Int, ARGS[1])
