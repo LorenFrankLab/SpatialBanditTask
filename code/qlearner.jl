@@ -415,6 +415,19 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     end
 end
 
+function find_Q_vals_by_day(data, results; add_leaf=true, rewscaled, delay_turn_bias)
+    ndays = maximum(data.daynum)
+    liks = zeros(ndays)
+    dfs = []
+    for i in 1:ndays
+        (liks[i], df) = qlik(view(data, data.daynum .== i, :), results;
+        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+        push!(dfs, df)
+    end
+    record_df = vcat(dfs...) # Combine all session results
+    hcat(data, record_df) # Append columns to the original data
+end
+
 run_q_leaf(data; kwargs...) = run_q(data; add_βleaf=true, kwargs...)
 run_q_leaf_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_γ2=true, kwargs...)
 run_q_leaf_retainbelief(data; kwargs...) = run_q(data; add_βleaf=true, add_retain_belief=true, kwargs...)

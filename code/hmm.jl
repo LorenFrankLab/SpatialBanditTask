@@ -772,6 +772,19 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     end
 end
 
+function find_Q_vals_by_day(data, results; add_leaf=true, rewscaled, delay_turn_bias)
+    ndays = maximum(data.daynum)
+    liks = zeros(ndays)
+    dfs = []
+    for i in 1:ndays
+        (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
+        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+        push!(dfs, df)
+    end
+    record_df = vcat(dfs...) # Combine all session results
+    hcat(data, record_df) # Append columns to the original data
+end
+
 # Non-Depletion
 run_hmm_leaf(data; kwargs...) = run_hmm(data; add_βleaf=true, kwargs...)
 run_hmm_leaf_γ2(data; kwargs...) = run_hmm(data; add_βleaf=true, add_γ2=true, kwargs...)
