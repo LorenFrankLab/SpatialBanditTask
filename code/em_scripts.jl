@@ -1,3 +1,4 @@
+using MAT
 """
 Pretty-print group-level means and SDs.
 
@@ -10,15 +11,26 @@ transforms: optionally, a dictionary of columns names to functions
 """
 function show_results(results; mu=true, sigma=true, transforms=nothing)
     io = IOBuffer()
-    
+
     varnames = results.varnames
     betas = results.betas
+    
+    varlens = length.(string.(round.(results.betas; digits=2))) .+ 1
+    varnames_short = copy(varnames)
+    for i in eachindex(varnames_short)
+        if length(eachindex(varnames_short[i])) > varlens[i]
+            varnames_short[i] = varnames_short[i][1:nextind(varnames[i],0,varlens[i])]
+        end
+        varnames_short[i] *= " "^(varlens[i] + 1 - length(eachindex(varnames_short[i])))
+    end
+
     if !isnothing(transforms)
         for (k,fn) in transforms
             inds = findall(varnames .== k)
             if length(inds) > 0
                 ind = inds[1]
                 varnames = vcat(varnames, "*"*varnames[ind])
+                varnames_short = vcat(varnames_short, "*"*varnames_short[ind])
                 new_betas = zeros(size(betas, 1))
                 new_betas[1] = fn(betas[1,ind])
                 for j in 2:size(betas, 1)
@@ -27,14 +39,6 @@ function show_results(results; mu=true, sigma=true, transforms=nothing)
                 betas = hcat(betas, new_betas)
             end
         end
-    end
-    
-    varnames_short = copy(varnames)
-    for i in eachindex(varnames_short)
-        if length(eachindex(varnames_short[i])) > 5
-            varnames_short[i] = varnames_short[i][1:nextind(varnames[i],0,5)]
-        end
-        varnames_short[i] *= " "^(6 - length(eachindex(varnames_short[i])))
     end
     
     print(io, "<pre>")
@@ -117,4 +121,39 @@ function subject_cov(results; scale=true)
     my_string = replace(my_string, "\n" => "<br/>")
     
     my_string
+end
+
+function EM_to_dict(results::EMResults)
+    Dict(
+        "varnames" => results.varnames,
+        "betas" => results.betas,
+        "sigma" => results.sigma,
+        "x" => results.x,
+        "l" => results.l,
+        "h" => results.h,
+        )
+end
+
+function EM_to_dict(results::EMResultsExtended)
+    Dict(
+        "varnames" => results.varnames,
+        "betas" => results.betas,
+        "sigma" => results.sigma,
+        "x" => results.x,
+        "l" => results.l,
+        "h" => results.h,
+        "standarderrors" => results.standarderrors,
+        "pvalues" => results.pvalues,
+        "covmtx" => results.covmtx,
+        )
+end
+
+function write_EM_to_mat(results, filename; params...)
+    d = EM_to_dict(results)
+    if !isnothing(params)
+        for (k, v) in params
+            d[String(k)] = [v]
+        end
+    end
+    matwrite(filename, d; compress=true)
 end

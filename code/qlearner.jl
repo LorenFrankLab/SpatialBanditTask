@@ -89,17 +89,22 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             Qstem[prevs, i] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
             # spatial bias
             # 1 -> 2, 2->3, 3->1
+            # Probability of stay/switch
+            # mod1(prevs + 1, 3) and mod1(prevs + 2, 3) give us the other two stems
+            # log(exp(Q_x) / sum(exp.(Q))) -> Q_x - logsumexp(Q)
             if delay_turn_bias  # Compute stay/go before we add a turn bias
-                p_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))  # Better results than sum(exp.())
+                lp_stay = Qstem[prevs, i] - logsumexp(view(Qstem, :, i))
+                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i)) - logsumexp(view(Qstem, :, i))
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
-            else
+            else # Or after we add the turn bias
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
-                p_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))
+                lp_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))
+                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i)) - logsumexp(view(Qstem, :, i))
             end
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
-                ll = log(p_stay)
-            else  # If a go trial, 1-p times the left/right turn choice
-                ll = log(1 - p_stay)
+                ll = lp_stay
+            else  # If a go trial, p(go) times the left/right turn choice
+                ll = lp_go
                 ll += Qstem[c1[i], i] - logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i))
             end
         else  # First trial, no biases and just three-way choice
@@ -408,6 +413,19 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     else
         return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
     end
+end
+
+function find_Q_vals_by_day_qlearner(data, results; add_leaf=true, rewscaled, delay_turn_bias)
+    ndays = maximum(data.daynum)
+    liks = zeros(ndays)
+    dfs = []
+    for i in 1:ndays
+        (liks[i], df) = qlik(view(data, data.daynum .== i, :), results;
+        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+        push!(dfs, df)
+    end
+    record_df = vcat(dfs...) # Combine all session results
+    hcat(data, record_df) # Append columns to the original data
 end
 
 run_q_leaf(data; kwargs...) = run_q(data; add_βleaf=true, kwargs...)

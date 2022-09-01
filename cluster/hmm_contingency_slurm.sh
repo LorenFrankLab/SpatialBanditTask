@@ -12,7 +12,5 @@
 
 echo $SLURM_ARRAY_TASK_ID
 
-module load julia/1.6.0
-
 mkdir -p ../results/hmm_contingency
 JULIA_NUM_THREADS=8 julia hmm_contingency.jl $SLURM_ARRAY_TASK_ID
