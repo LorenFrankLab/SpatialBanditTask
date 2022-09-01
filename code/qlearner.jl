@@ -415,7 +415,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     end
 end
 
-function find_Q_vals_by_day(data, results; add_leaf=true, rewscaled, delay_turn_bias)
+function find_Q_vals_by_day_qlearner(data, results; add_leaf=true, rewscaled, delay_turn_bias)
     ndays = maximum(data.daynum)
     liks = zeros(ndays)
     dfs = []
