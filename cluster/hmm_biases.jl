@@ -44,6 +44,9 @@ fns = [
        ("hmm_leaf_stay_spatial_leafspatial_γ2", run_hmm_leaf_stay_spatial_leafspatial_γ2),
        ("hmm_leaf_stay_spatial_leafturn_γ2", run_hmm_leaf_stay_spatial_leafturn_γ2),
 ]
+
+println(ARGS)
+
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
