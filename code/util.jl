@@ -116,3 +116,52 @@ function load_all_data()
     end
     vcat(dfs...)
 end
+
+function load_animal_dj(animal, filepath)
+    # # csv_file to estimate value for
+    # if depletion
+    #     csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
+    #     # mkdir(fullfile(filepath,["hmm_decay_",animal]))
+    # else
+    #     csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
+    #     # mkdir(fullfile(filepath,['hmm_',animal]))
+    # end
+    # fullpath = joinpath(filepath, "data", csv_file)
+    # df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
+    df = DataFrame(CSV.File(filepath, drop=[1]))  # Use filepath instead of fullpath, drop index column
+
+    # recode some variables
+    df.rewscaled = 2 * df.reward .- 1
+    df.stemchoice = [df[i,:stem][1] - 'A' + 1 for i in 1:nrow(df)]
+    df.leafchoice = 1 .+ mod.(df.leaf.+1,2)
+
+    # Number days 1-n
+    dates = unique(df.date)
+    df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
+
+    # Code sessions contiguously across days
+    datesessions = string.(df.date) .* string.(df.session)
+    uniq_datesessions = unique(datesessions)
+    df.daysessionnum = [minimum(findall(datesessions[i] .== uniq_datesessions)) for i in 1:nrow(df)]
+
+    # Stem switches
+    df[!, :stemswitch] .= false
+    prevstem = 0
+    prevsession = 0
+    for i in 1:size(df, 1)
+        session = df[i, :session]
+        if (session == prevsession)
+            stem = df[i, :stem]
+            if (stem != prevstem)
+                df[i, :stemswitch] = true
+            end
+            prevstem = stem
+        end
+        prevsession = session
+    end
+
+    df.cont_combo = cont_combination_old.(string.(df.contingency))
+    df.contingency = string.(df.contingency)
+
+    return df
+end
