@@ -151,6 +151,15 @@ function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_
     Qleaf .= Qleaf .* βleaf
 end
 
+leafpairs = Dict(
+    1=>2,
+    2=>1,
+    3=>4,
+    4=>3,
+    5=>6,
+    6=>6,
+)
+
 """
 hmm_lik
 
@@ -208,6 +217,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
         Qleaf_record = zeros(ntrials, 2)
         state_entropy = zeros(ntrials)
         reward_entropy = zeros(ntrials)
+        reward_entropy_current_leaf = zeros(ntrials)
+        reward_entropy_next_leaf = Vector{Union{Float64, Missing}}(undef, ntrials)
+        reward_entropy_upcoming_leaf = zeros(ntrials)
         stem_1_p = zeros(ntrials)
         stem_2_p = zeros(ntrials)
         stem_3_p = zeros(ntrials)
@@ -343,7 +355,18 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         sum((ϕ .== .5) .* α; dims=1)
                         sum((ϕ .== .8) .* α; dims=1)
                         ])
+                    # First is entropy across all leaves
                     reward_entropy[i] = sum([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
+                    # Entropy of the chosen leaf
+                    reward_entropy_current_leaf[i] = -sum(reward_probs[:,leaf[t]] .* log.(reward_probs[:,leaf[t]]))
+                    # Entropy of the next-chosen leaf 
+                    if t+1 in t_ind
+                        reward_entropy_next_leaf[i] = -sum(reward_probs[:,leaf[t+1]] .* log.(reward_probs[:,leaf[t+1]]))
+                    else
+                        reward_entropy_next_leaf[i] = missing
+                    end
+                    # Entropy of the pair leaf, assuming we don't switch
+                    reward_entropy_upcoming_leaf[i] = -sum(reward_probs[:,leafpairs[leaf[t]]] .* log.(reward_probs[:,leafpairs[leaf[t]]]))
 
                     state_probs = zeros(729)
                     stem_1_choice_probs = zeros(729)
@@ -483,6 +506,9 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
             state_entropy = state_entropy,
             # Entropy of reward distribution
             reward_entropy = reward_entropy,
+            reward_entropy_current_leaf = reward_entropy_current_leaf,
+            reward_entropy_next_leaf = reward_entropy_next_leaf,
+            reward_entropy_upcoming_leaf = reward_entropy_upcoming_leaf,
             # Model probabilities of choosing each stem and leaf
             stem_1_p = stem_1_p,
             stem_2_p = stem_2_p,
