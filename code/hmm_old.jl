@@ -151,15 +151,6 @@ function hmm_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_
     Qleaf .= Qleaf .* βleaf
 end
 
-leafpairs = Dict(
-    1=>2,
-    2=>1,
-    3=>4,
-    4=>3,
-    5=>6,
-    6=>5,
-)
-
 """
 hmm_lik
 
@@ -217,15 +208,6 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
         Qleaf_record = zeros(ntrials, 2)
         state_entropy = zeros(ntrials)
         reward_entropy = zeros(ntrials)
-        reward_entropy_leaf_1 = zeros(ntrials)
-        reward_entropy_leaf_2 = zeros(ntrials)
-        reward_entropy_leaf_3 = zeros(ntrials)
-        reward_entropy_leaf_4 = zeros(ntrials)
-        reward_entropy_leaf_5 = zeros(ntrials)
-        reward_entropy_leaf_6 = zeros(ntrials)
-        reward_entropy_current_leaf = zeros(ntrials)
-        reward_entropy_pair_prev_leaf = Vector{Union{Float64, Missing}}(undef, ntrials)
-        reward_entropy_pair_current_leaf = zeros(ntrials)
         stem_1_p = zeros(ntrials)
         stem_2_p = zeros(ntrials)
         stem_3_p = zeros(ntrials)
@@ -332,7 +314,6 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                 end
 
                 # Everything below is just for meta-info on decision variables
-                # Note that this is after we've calculated Q-values, but before we've updated contingencies
                 if record
                     stem_1_p[i] = exp(Qstem[1] - logsumexp(Qstem))
                     stem_2_p[i] = exp(Qstem[2] - logsumexp(Qstem))
@@ -362,26 +343,7 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
                         sum((ϕ .== .5) .* α; dims=1)
                         sum((ϕ .== .8) .* α; dims=1)
                         ])
-                    # First is entropy across all leaves
                     reward_entropy[i] = sum([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
-                    # Now individual leaves - this represents epistemic uncertainty
-                    # e.g. uncertainty about the true mean, NOT uncertainty about expected reward
-                    reward_entropy_leaf_1[i] = -sum(reward_probs[:,1] .* log.(reward_probs[:,1]))
-                    reward_entropy_leaf_2[i] = -sum(reward_probs[:,2] .* log.(reward_probs[:,2]))
-                    reward_entropy_leaf_3[i] = -sum(reward_probs[:,3] .* log.(reward_probs[:,3]))
-                    reward_entropy_leaf_4[i] = -sum(reward_probs[:,4] .* log.(reward_probs[:,4]))
-                    reward_entropy_leaf_5[i] = -sum(reward_probs[:,5] .* log.(reward_probs[:,5]))
-                    reward_entropy_leaf_6[i] = -sum(reward_probs[:,6] .* log.(reward_probs[:,6]))
-                    # Entropy of the chosen leaf, before we observe it
-                    reward_entropy_current_leaf[i] = -sum(reward_probs[:,leaf[t]] .* log.(reward_probs[:,leaf[t]]))
-                    # Entropy of the pair of our previous leaf, or where we would end up without a stem switch
-                    if t-1 in t_ind
-                        reward_entropy_pair_prev_leaf[i] = -sum(reward_probs[:,leafpairs[leaf[t-1]]] .* log.(reward_probs[:,leafpairs[leaf[t-1]]]))
-                    else
-                        reward_entropy_pair_prev_leaf[i] = missing
-                    end
-                    # Entropy of the pair leaf of the chosen leaf (unclear utility of this)
-                    reward_entropy_pair_current_leaf[i] = -sum(reward_probs[:,leafpairs[leaf[t]]] .* log.(reward_probs[:,leafpairs[leaf[t]]]))
 
                     state_probs = zeros(729)
                     stem_1_choice_probs = zeros(729)
@@ -521,15 +483,6 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
             state_entropy = state_entropy,
             # Entropy of reward distribution
             reward_entropy = reward_entropy,
-            reward_entropy_leaf_1 = reward_entropy_leaf_1,
-            reward_entropy_leaf_2 = reward_entropy_leaf_2,
-            reward_entropy_leaf_3 = reward_entropy_leaf_3,
-            reward_entropy_leaf_4 = reward_entropy_leaf_4,
-            reward_entropy_leaf_5 = reward_entropy_leaf_5,
-            reward_entropy_leaf_6 = reward_entropy_leaf_6,
-            reward_entropy_current_leaf = reward_entropy_current_leaf,
-            reward_entropy_pair_prev_leaf = reward_entropy_pair_prev_leaf,
-            reward_entropy_pair_current_leaf = reward_entropy_pair_current_leaf,
             # Model probabilities of choosing each stem and leaf
             stem_1_p = stem_1_p,
             stem_2_p = stem_2_p,

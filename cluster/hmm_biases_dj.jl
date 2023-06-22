@@ -123,88 +123,88 @@ function hmm_biases_dj(
     
 end
 
-function find_Q_vals_by_day_dj(animal, results, trials_info_by_rat_csv_path, rewscaled; add_leaf=true)
-    data = load_animal_dj(animal, trials_info_by_rat_csv_path)
-    ndays = maximum(data.daynum)
-    liks = zeros(ndays)
-    dfs = []
-    for i in 1:ndays
-        (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
-            subject=i, add_leaf=add_leaf, rewscaled=rewscaled, record=true)
-        push!(dfs, df)
-    end
-    # Combine all session results
-    record_df = vcat(dfs...)
-    # Append columns to the original data
-    hcat(data, record_df)
-end
+# function find_Q_vals_by_day_dj(animal, results, trials_info_by_rat_csv_path, rewscaled; add_leaf=true)
+#     data = load_animal_dj(animal, trials_info_by_rat_csv_path)
+#     ndays = maximum(data.daynum)
+#     liks = zeros(ndays)
+#     dfs = []
+#     for i in 1:ndays
+#         (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
+#             subject=i, add_leaf=add_leaf, rewscaled=rewscaled, record=true)
+#         push!(dfs, df)
+#     end
+#     # Combine all session results
+#     record_df = vcat(dfs...)
+#     # Append columns to the original data
+#     hcat(data, record_df)
+# end
 
-"""
-Return a dataframe for the animal
+# """
+# Return a dataframe for the animal
 
-    animal<string>: Name of the animal
-    depletion<bool, default false>: Whether to use the non-depletion or depletion data for this anmal
+#     animal<string>: Name of the animal
+#     depletion<bool, default false>: Whether to use the non-depletion or depletion data for this anmal
 
-    Coding:
-    reward: 0/1
-    rewscaled: -1/1
+#     Coding:
+#     reward: 0/1
+#     rewscaled: -1/1
 
-    stem: A/B/C
-    stemchoice: 1-3
-    leaf: 1-6
-    leafchoice: 1-2 (conditional on stem)
+#     stem: A/B/C
+#     stemchoice: 1-3
+#     leaf: 1-6
+#     leafchoice: 1-2 (conditional on stem)
 
-    trial: 0-179
-    session: 1-?, per-day session number, e.g. 1 is first session each day
-    daynum: 1-?, contiguous day numbering
-    daysessionnum: 1-?, unique session number continued across days
+#     trial: 0-179
+#     session: 1-?, per-day session number, e.g. 1 is first session each day
+#     daynum: 1-?, contiguous day numbering
+#     daysessionnum: 1-?, unique session number continued across days
 
-"""
-function load_animal_dj(animal, trials_info_by_rat_csv_path)
-    # csv_file to estimate value for
-    #if depletion
-    #    csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
-    #    # mkdir(fullfile(filepath,["hmm_decay_",animal]))
-    #else
-    #    csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
-    #    # mkdir(fullfile(filepath,['hmm_',animal]))
-    #end
-    #fullpath = joinpath(filepath, "data", csv_file)
-    #df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
-    df = DataFrame(CSV.File(trials_info_by_rat_csv_path, drop=[1]))  # Drop index column
+# """
+# function load_animal_dj(animal, trials_info_by_rat_csv_path)
+#     # csv_file to estimate value for
+#     #if depletion
+#     #    csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
+#     #    # mkdir(fullfile(filepath,["hmm_decay_",animal]))
+#     #else
+#     #    csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
+#     #    # mkdir(fullfile(filepath,['hmm_',animal]))
+#     #end
+#     #fullpath = joinpath(filepath, "data", csv_file)
+#     #df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
+#     df = DataFrame(CSV.File(trials_info_by_rat_csv_path, drop=[1]))  # Drop index column
 
-    # recode some variables
-    df.rewscaled = 2 * df.reward .- 1
-    df.stemchoice = [df[i,:stem][1] - 'A' + 1 for i in 1:nrow(df)]
-    df.leafchoice = 1 .+ mod.(df.leaf.+1,2)
+#     # recode some variables
+#     df.rewscaled = 2 * df.reward .- 1
+#     df.stemchoice = [df[i,:stem][1] - 'A' + 1 for i in 1:nrow(df)]
+#     df.leafchoice = 1 .+ mod.(df.leaf.+1,2)
 
-    # Number days 1-n
-    dates = unique(df.date)
-    df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
+#     # Number days 1-n
+#     dates = unique(df.date)
+#     df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
 
-    # Code sessions contiguously across days
-    datesessions = string.(df.date) .* string.(df.session)
-    uniq_datesessions = unique(datesessions)
-    df.daysessionnum = [minimum(findall(datesessions[i] .== uniq_datesessions)) for i in 1:nrow(df)]
+#     # Code sessions contiguously across days
+#     datesessions = string.(df.date) .* string.(df.session)
+#     uniq_datesessions = unique(datesessions)
+#     df.daysessionnum = [minimum(findall(datesessions[i] .== uniq_datesessions)) for i in 1:nrow(df)]
 
-    # Stem switches
-    df[!, :stemswitch] .= false
-    prevstem = 0
-    prevsession = 0
-    for i in 1:size(df, 1)
-        session = df[i, :session]
-        if (session == prevsession)
-            stem = df[i, :stem]
-            if (stem != prevstem)
-                df[i, :stemswitch] = true
-            end
-            prevstem = stem
-        end
-        prevsession = session
-    end
+#     # Stem switches
+#     df[!, :stemswitch] .= false
+#     prevstem = 0
+#     prevsession = 0
+#     for i in 1:size(df, 1)
+#         session = df[i, :session]
+#         if (session == prevsession)
+#             stem = df[i, :stem]
+#             if (stem != prevstem)
+#                 df[i, :stemswitch] = true
+#             end
+#             prevstem = stem
+#         end
+#         prevsession = session
+#     end
 
-    df.cont_combo = cont_combination_old.(string.(df.contingency))
-    df.contingency = string.(df.contingency)
+#     df.cont_combo = cont_combination_old.(string.(df.contingency))
+#     df.contingency = string.(df.contingency)
 
-    return df
-end
+#     return df
+# end

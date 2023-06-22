@@ -89,8 +89,8 @@ function load_animal(animal, filepath; depletion=false)
     df[!, :stemswitch] .= false
     prevstem = 0
     prevsession = 0
-    for i in axes(df, 1)
-        session = df[i, :daysessionnum]
+    for i in 1:size(df, 1)
+        session = df[i, :session]
         if (session == prevsession)
             stem = df[i, :stem]
             if (stem != prevstem)
@@ -101,62 +101,16 @@ function load_animal(animal, filepath; depletion=false)
         prevsession = session
     end
 
-    # Mark length of runs pre- and post-switch
-    df[!, :n_post_switch] .= -1
-    switch_happened = false
-    n_post_switch = 0
-    prev_session = 0
-    for i in axes(df, 1)
-        session = df[i, :daysessionnum]
-        if (session != prev_session)
-            switch_happened = false
-            n_post_switch = -1
-        else
-            if df[i, :stemswitch]
-                switch_happened = true
-                n_post_switch = -1
-            end
-            if switch_happened
-                n_post_switch += 1
-            end
-        end
-        df[i, :n_post_switch] = n_post_switch
-        prev_session = session
-    end
-
-    # backwards sweep
-    df[!, :n_pre_switch] .= -1
-    switch_happened = false
-    n_pre_switch = 0
-    prev_session = 0
-    for i in reverse(axes(df, 1))
-        session = df[i, :daysessionnum]
-        if (session != prev_session)
-            switch_happened = false
-            n_pre_switch = -1
-        else
-            if df[i, :stemswitch]
-                switch_happened = true
-                n_pre_switch = -1
-            end
-            if switch_happened
-                n_pre_switch += 1
-            end
-        end
-        df[i, :n_pre_switch] = n_pre_switch
-        prev_session = session
-    end
-
     df.cont_combo = cont_combination_old.(string.(df.contingency))
     df.contingency = string.(df.contingency)
 
     return df
 end
 
-function load_all_data(filepath)
+function load_all_data()
     dfs = []
     for animal in animals
-        df = load_animal(animal, filepath)
+        df = load_animal(animal)
         df[!, :sub] .= animal
         push!(dfs, df)
     end
@@ -194,8 +148,8 @@ function load_animal_dj(animal, filepath)
     df[!, :stemswitch] .= false
     prevstem = 0
     prevsession = 0
-    for i in axes(df, 1)
-        session = df[i, :daysessionnum]
+    for i in 1:size(df, 1)
+        session = df[i, :session]
         if (session == prevsession)
             stem = df[i, :stem]
             if (stem != prevstem)
@@ -204,52 +158,6 @@ function load_animal_dj(animal, filepath)
             prevstem = stem
         end
         prevsession = session
-    end
-
-    # Mark length of runs pre- and post-switch
-    df[!, :n_post_switch] .= -1
-    switch_happened = false
-    n_post_switch = 0
-    prev_session = 0
-    for i in axes(df, 1)
-        session = df[i, :daysessionnum]
-        if (session != prev_session)
-            switch_happened = false
-            n_post_switch = -1
-        else
-            if df[i, :stemswitch]
-                switch_happened = true
-                n_post_switch = -1
-            end
-            if switch_happened
-                n_post_switch += 1
-            end
-        end
-        df[i, :n_post_switch] = n_post_switch
-        prev_session = session
-    end
-
-    # backwards sweep
-    df[!, :n_pre_switch] .= -1
-    switch_happened = false
-    n_pre_switch = 0
-    prev_session = 0
-    for i in reverse(axes(df, 1))
-        session = df[i, :daysessionnum]
-        if (session != prev_session)
-            switch_happened = false
-            n_pre_switch = -1
-        else
-            if df[i, :stemswitch]
-                switch_happened = true
-                n_pre_switch = -1
-            end
-            if switch_happened
-                n_pre_switch += 1
-            end
-        end
-        df[i, :n_pre_switch] = n_pre_switch
-        prev_session = session
     end
 
     df.cont_combo = cont_combination_old.(string.(df.contingency))
