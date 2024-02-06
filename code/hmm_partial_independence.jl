@@ -126,7 +126,7 @@ end
 """
 All 729 possible contingencies
 """
-function get_all_congingencies()
+function get_all_contingencies()
     contingencies = zeros(729, 6)
     probabilities = [0.2, 0.5, 0.8]
     for i in 1:729
