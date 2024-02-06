@@ -85,7 +85,7 @@ If 'record':
     state_entropy
     reward_entropy
 """
-function hmm_independent_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function hmm_independent_lik(df, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     ϕ = [0.2, 0.5, 0.8]
     nstates = length(ϕ)
     ntrials = length(df)
@@ -160,7 +160,12 @@ function hmm_independent_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βs
 
     for date in unique(dates)
         d_sessions = sessions[dates .== date]
-        α .= statePrior
+        α1 .= statePrior
+        α2 .= statePrior
+        α3 .= statePrior
+        α4 .= statePrior
+        α5 .= statePrior
+        α6 .= statePrior
         for session in unique(d_sessions)
             # Subset of trials for the session/date
             t_ind = findall((dates .== date) .& (sessions .== session))
@@ -188,21 +193,21 @@ function hmm_independent_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βs
             @inbounds for t in t_ind
                 # Q = expectation over states
                 if rewscaled
-                    mul!(Qtemp[1], ϕT, α1)
-                    mul!(Qtemp[2], ϕT, α2)
-                    mul!(Qtemp[3], ϕT, α3)
-                    mul!(Qtemp[4], ϕT, α4)
-                    mul!(Qtemp[5], ϕT, α5)
-                    mul!(Qtemp[6], ϕT, α6)
+                    Qtemp[1] = ϕT * α1
+                    Qtemp[2] = ϕT * α2
+                    Qtemp[3] = ϕT * α3
+                    Qtemp[4] = ϕT * α4
+                    Qtemp[5] = ϕT * α5
+                    Qtemp[6] = ϕT * α6
                     Qtemp .*= depletion .* 2.0
                     Qtemp .-= 1.0
                 else
-                    mul!(Qtemp[1], ϕT, α1)
-                    mul!(Qtemp[2], ϕT, α2)
-                    mul!(Qtemp[3], ϕT, α3)
-                    mul!(Qtemp[4], ϕT, α4)
-                    mul!(Qtemp[5], ϕT, α5)
-                    mul!(Qtemp[6], ϕT, α6)
+                    Qtemp[1] = ϕT * α1
+                    Qtemp[2] = ϕT * α2
+                    Qtemp[3] = ϕT * α3
+                    Qtemp[4] = ϕT * α4
+                    Qtemp[5] = ϕT * α5
+                    Qtemp[6] = ϕT * α6
                     Qtemp .*= depletion
                 end
                 Q[1][1] = Qtemp[1]
@@ -526,8 +531,8 @@ end
 
 # Probably shouldn't use this second version in the EM code
 # As julia doens't allow specialization on kw arguments?
-function hmm_independent_lik(df, ϕ; volatility=1.0/30.0, βgo=0., βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
-    hmm_independent_lik(df, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
+function hmm_independent_lik(df; volatility=1.0/30.0, βgo=0., βstay=0., βleaf=0., stay_bias=0., turn_bias=0., spatial_bias=[0., 0, 0], leaf_turn_bias=0., leaf_spatial_bias=[0., 0, 0], γ2=0., depletion_factor=1., retain_belief=0., delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    hmm_independent_lik(df, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -540,7 +545,7 @@ Note that params should be a dictionary of symbols to values, e.g. (:βgo => 2.0
 If `subject` is provided, use parameters from subject `subject`.
 Otherwise use group-level betas
 """
-function hmm_independent_lik(data, ϕ, results::T; subject=0, params=nothing, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
+function hmm_independent_lik(data, results::T; subject=0, params=nothing, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
     d = Dict{Symbol, Any}()
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
@@ -585,7 +590,7 @@ function hmm_independent_lik(data, ϕ, results::T; subject=0, params=nothing, de
             d[k] = v
         end
     end
-    hmm_independent_lik(data, ϕ; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
+    hmm_independent_lik(data; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
 end
 
 """
@@ -608,7 +613,6 @@ rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 """
 function run_hmm_independent(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
-    ϕ=nothing,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -680,10 +684,6 @@ function run_hmm_independent(df; maxiter=100, emtol=1e-3, full=true, extended=fa
     end
 
     function fn(params, data)
-        if ϕ === nothing
-            ϕ = get_contingencies()
-        end
-
         volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-1 using standard normal CDF)
         βgo = params[2]
         βstay = params[3]
@@ -753,7 +753,7 @@ function run_hmm_independent(df; maxiter=100, emtol=1e-3, full=true, extended=fa
         end
 
 
-        return hmm_independent_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
+        return hmm_independent_lik(data, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
@@ -780,7 +780,7 @@ function find_Q_vals_by_day_hmm_independent(data, results; add_leaf=true, rewsca
     liks = zeros(ndays)
     dfs = []
     for i in 1:ndays
-        (liks[i], df) = hmm_independent_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
+        (liks[i], df) = hmm_independent_lik(view(data, data.daynum .== i, :), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end
