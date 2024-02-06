@@ -7,7 +7,7 @@
 #SBATCH -J 'hmm_partial_independence_biases'
 #SBATCH -o ../logs/hmm_partial_independence_biases-%j.out
 #SBATCH -p all
-#SBATCH -t 300
+#SBATCH -t 3000
 #SBATCH -c 8
 
 echo $SLURM_ARRAY_TASK_ID
