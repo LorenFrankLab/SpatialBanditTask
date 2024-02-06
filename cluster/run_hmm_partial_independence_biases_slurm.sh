@@ -1,1 +1,1 @@
-sbatch --array=1-190 ./hmm_partial_independence_biases_slurm.sh
+sbatch --array=1-960 ./hmm_partial_independence_biases_slurm.sh
