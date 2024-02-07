@@ -268,7 +268,12 @@ function hmm_independent_lik(df, volatility, βgo::U, βstay, βleaf, stay_bias,
                     Q_record[i, :] .= Qtemp
                     Qstem_record[i, :] .= Qstem
                     Qleaf_record[i, :] .= Qleaf
-                    state_entropy[i] = -sum(α .* log.(α))
+                    state_entropy[i] = -sum(α1 .* log.(α1))
+                    state_entropy[i] = -sum(α2 .* log.(α2))
+                    state_entropy[i] = -sum(α3 .* log.(α3))
+                    state_entropy[i] = -sum(α4 .* log.(α4))
+                    state_entropy[i] = -sum(α5 .* log.(α5))
+                    state_entropy[i] = -sum(α6 .* log.(α6))
 
                     # First, find the probability of each leaf being .2/.5/.8
                     # Next find entropy of that dist, and mean across all 6 leaves
