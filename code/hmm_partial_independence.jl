@@ -741,7 +741,7 @@ function run_hmm_partial_independence(df; maxiter=100, emtol=1e-3, full=true, ex
 
     if add_ρ
         initbetas = hcat(initbetas, 0)
-        push!(initsigma, 5)
+        push!(initsigma, 1)
         push!(varnames, "ρ")
     end
     if add_βleaf
@@ -801,7 +801,7 @@ function run_hmm_partial_independence(df; maxiter=100, emtol=1e-3, full=true, ex
         i = 4
 
         if add_ρ
-            ρ = params[i] # beta for leaf choice on switch
+            ρ = 0.5 + 0.5 * erf(params[i] / sqrt(2)) # weight for partial independence
             i += 1
         else
             ρ = ρ_default
