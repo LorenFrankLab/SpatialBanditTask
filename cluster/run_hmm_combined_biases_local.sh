@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-mkdir -p ../results/hmm_independent_combined_biases
+mkdir -p ../results/hmm_combined_biases
 for i in {1..160}; do
-    JULIA_NUM_THREADS=8 julia hmm_independent_combined_biases.jl $i
+    JULIA_NUM_THREADS=8 julia hmm_combined_biases.jl $i
 done 
