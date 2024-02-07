@@ -665,6 +665,8 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
+    loocv_data=nothing,
+    loocv_subject=nothing,
     )
 
     data = copy(df)
@@ -728,7 +730,7 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
             ϕ = get_contingencies()
         end
 
-        volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-0.2 using standard normal CDF)
+        volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-1 using standard normal CDF)
         βgo = params[2]
         βstay = params[3]
         i = 4
@@ -800,22 +802,30 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
         return hmm_lik(data, ϕ, volatility, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
-    if extended
-        try
-            @info "Running emerrors"
-            (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-            return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
-        catch err
-            if isa(err, SingularException)
-                @warn "emerrors failed to run. Re-check fitting. Returning EMResults"
-                return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
-            else
-                rethrow()
-            end
+    if !isnothing(loocv_data)
+        if !isnothing(loocv_subject)
+            return loocv_singlesubject(data,subs,loocv_subject,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
+        else
+            return loocv(data,subs,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
         end
     else
-        return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+        (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol, full, maxiter, quiet);
+        if extended
+            try
+                @info "Running emerrors"
+                (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
+                return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+            catch err
+                if isa(err, SingularException)
+                    @warn "emerrors failed to run. Re-check fitting. Returning EMResults"
+                    return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+                else
+                    rethrow()
+                end
+            end
+        else
+            return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+        end
     end
 end
 
