@@ -261,7 +261,7 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias)
     save("$(base_dir)/$(fname).jld2", fname, results; compress=true)
     write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
     Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias);
-    CSV.write("$(base_dir)/Q_vals_$(fname).csv", Q)
+    CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
 end
 
 # run_fn(fn_name, fn, false, false)
