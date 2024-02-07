@@ -264,6 +264,6 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias)
     CSV.write("$(base_dir)/Q_vals_$(fname).csv", Q)
 end
 
-run_fn(fn_name, fn, false, false)
+# run_fn(fn_name, fn, false, false)
 run_fn(fn_name, fn, true, false)
-run_fn(fn_name, fn, true, true)
+# run_fn(fn_name, fn, true, true)
