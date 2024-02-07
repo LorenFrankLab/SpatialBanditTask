@@ -140,6 +140,15 @@ function get_all_contingencies()
     return contingencies
 end
 
+function get_all_contingencies_sorted(core)
+    # Re-organize so 
+    core_rows = eachrow(core)
+    all_contingencies = get_all_contingencies()
+    all_rows = eachrow(all_contingencies)
+    contingencies = Matrix(stack(vcat(core_rows, setdiff(all_rows, core_rows)))')
+    return contingencies
+end
+
 """
 Make parameterized transition matrix for the HMM,
     allowing for partial independence between states
@@ -153,24 +162,57 @@ Make parameterized transition matrix for the HMM,
         If ρ=1, all transitions will be to the first n_core states
     n_core: number of core states
 """
-function make_T!(T, v, ρ, n_core)
-    n_total = size(T, 1)
+# function make_T!(T, v, ρ, n_core)
+#     n_total = size(T, 1)
+#     for i in 1:n_total
+#         if i <= n_core
+#             T[:, i] .= (1 - ρ) * v / (n_total - 1)
+#             T[1:n_core, i] .+= ρ * v / (n_core - 1)
+#         else
+#             # If not from a core state, weighting is slightly different
+#             # because of diagonal
+#             T[:, i] .= (1 - ρ) * v / (n_total - 1)
+#             T[1:n_core, i] .+= ρ * v / (n_core)
+#         end
+#         T[i, i] = 1 - v
+#     end
+# end
+
+"""
+Full independence between states
+
+For n changes, each entry is v_adj^n * (1-v)^(6-n)
+where v_adj is v / (# reward possibilities - 1)
+
+Each entry is volatility ^ number of changes between states
+"""
+function make_T_independent(contingencies, volatility)
+    n_diffs = zeros(729, 729)
+    n_unique = length(unique(contingencies))
+    for i in 1:729
+        for j in 1:729
+            n_diffs[i, j] = sum(contingencies[i, :] .!= contingencies[j, :])
+        end
+    end
+    # If we have three states, 'ident' block should sum to (1-v), and each other block should sum to v/2
+    T = ((volatility / (n_unique - 1)) .^ n_diffs) .* (1 - volatility) .^ (6 .- n_diffs)
+    return T
+end
+
+function make_T_dependent(volatility::U, n_core, n_total) where U
+    T = zeros(U, n_total, n_total)
     for i in 1:n_total
         if i <= n_core
-            T[:, i] .= (1 - ρ) * v / (n_total - 1)
-            T[1:n_core, i] .+= ρ * v / (n_core - 1)
+            T[1:n_core, i] .= volatility / (n_core - 1)
         else
             # If not from a core state, weighting is slightly different
             # because of diagonal
-            T[:, i] .= (1 - ρ) * v / (n_total - 1)
-            T[1:n_core, i] .+= ρ * v / (n_core)
+            T[1:n_core, i] .= volatility / (n_core)
         end
-        T[i, i] = 1 - v
+        T[i, i] = 1 - volatility
     end
+    return T
 end
-
-
-
 
 import Base.length
 length(df::U) where U <: DataFrame = size(df, 1)
@@ -241,20 +283,20 @@ If 'record':
 """
 function hmm_partial_independence_lik(df, ϕcore::Array{Float64, 2}, volatility, ρ, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     # Re-organize so 
-    ϕcore_rows = eachrow(ϕcore)
-    ϕall = get_all_contingencies()
-    ϕall_rows = eachrow(ϕall)
-    ϕ = Matrix(stack(vcat(ϕcore_rows, setdiff(ϕall_rows, ϕcore_rows)))')
+    ϕ = get_all_contingencies_sorted(ϕcore)
 
     nstates = size(ϕ, 1)
     ncore = size(ϕcore, 1)
     ntrials = length(df)
 
-    statePrior = ones(U,nstates) * 1/nstates
-
     # volatility and state-state transition matrix T
-    T = zeros(U,nstates,nstates)
-    make_T!(T, volatility, ρ, ncore)
+    T_independent = make_T_independent(ϕ, volatility)
+    T_dependent = make_T_dependent(volatility, ncore, nstates)
+    T = ρ * T_dependent + (1 - ρ) * T_independent
+    # Steady state, eigenvector with eigenvalue 1 (should be largest)
+    statePrior = zeros(U, nstates)
+    # statePrior .= real.(eigvecs(Tfloat)[:,end] / sum(eigvecs(Tfloat)[:,end]))
+    statePrior = T^100 * ones(nstates) / nstates  # Should be close to steady state
 
     lik::U = 0.
 
