@@ -13,7 +13,7 @@ function find_Q_vals_by_day(data, results; add_leaf=true, rewscaled, delay_turn_
     liks = zeros(ndays)
     dfs = []
     for i in 1:ndays
-        (liks[i], df) = hmm_independent_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
+        (liks[i], df) = hmm_independent_lik(view(data, data.daynum .== i, :), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end
