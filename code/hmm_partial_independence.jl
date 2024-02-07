@@ -143,6 +143,8 @@ end
 """
 Make parameterized transition matrix for the HMM,
     allowing for partial independence between states
+    
+    Assumes α <= T*α
 
     T: Transition matrix
     v: volatility / probability of changing state
@@ -155,13 +157,13 @@ function make_T!(T, v, ρ, n_core)
     n_total = size(T, 1)
     for i in 1:n_total
         if i <= n_core
-            T[i, :] .= (1 - ρ) * v / (n_total - 1)
-            T[i, 1:n_core] .+= ρ * v / (n_core - 1)
+            T[:, i] .= (1 - ρ) * v / (n_total - 1)
+            T[1:n_core, i] .+= ρ * v / (n_core - 1)
         else
             # If not from a core state, weighting is slightly different
             # because of diagonal
-            T[i, :] .= (1 - ρ) * v / (n_total - 1)
-            T[i, 1:n_core] .+= ρ * v / (n_core)
+            T[:, i] .= (1 - ρ) * v / (n_total - 1)
+            T[1:n_core, i] .+= ρ * v / (n_core)
         end
         T[i, i] = 1 - v
     end
