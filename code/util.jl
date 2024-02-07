@@ -153,6 +153,19 @@ function load_animal(animal, filepath; depletion=false)
     return df
 end
 
+"""
+Load both depletion and non-depletion data together.
+Depletion data is shifted to have unique daynum numbers following
+non-depletion sessions
+"""
+function load_animal_combined(animal, filepath)
+    nondep = load_animal(animal, filepath, depletion=false)
+    dep = load_animal(animal, filepath, depletion=true)
+    dep.daynum .+= maximum(nondep.daynum)
+    combined = vcat(nondep, dep)
+    return combined
+end
+
 function load_all_data(filepath)
     dfs = []
     for animal in animals
