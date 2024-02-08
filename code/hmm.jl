@@ -915,3 +915,21 @@ run_hmm_leaf_stay_turn_leafspatial_γ2_depletion(data; kwargs...) = run_hmm(data
 run_hmm_leaf_stay_turn_leafturn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 run_hmm_leaf_stay_spatial_leafspatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 run_hmm_leaf_stay_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+
+# Depletion without leaf, might make depletion / non-depletion comparison better?
+run_hmm_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_depletion_factor=true, kwargs...)
+run_hmm_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_retainbelief_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_retain_belief=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_turn_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_spatial_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+
+run_hmm_stay_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_retainbelief_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_turn_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_spatial_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+
+run_hmm_turn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_spatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_turn_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_stay_spatial_γ2_depletion(data; kwargs...) = run_hmm(data; add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
