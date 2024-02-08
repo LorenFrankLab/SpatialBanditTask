@@ -58,22 +58,22 @@ fns = [
     # ("hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion),
     # ("hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion),
 
-    # ("run_hmm_independentsamedist_depletion", run_hmm_independentsamedist_depletion),
-    # ("run_hmm_independentsamedist_γ2_depletion", run_hmm_independentsamedist_γ2_depletion),
-    # ("run_hmm_independentsamedist_retainbelief_depletion", run_hmm_independentsamedist_retainbelief_depletion),
-    ("run_hmm_independentsamedist_stay_depletion", run_hmm_independentsamedist_stay_depletion),
-    # ("run_hmm_independentsamedist_turn_depletion", run_hmm_independentsamedist_turn_depletion),
-    # ("run_hmm_independentsamedist_spatial_depletion", run_hmm_independentsamedist_spatial_depletion),
+    # ("hmm_independentsamedist_depletion", run_hmm_independentsamedist_depletion),
+    # ("hmm_independentsamedist_γ2_depletion", run_hmm_independentsamedist_γ2_depletion),
+    # ("hmm_independentsamedist_retainbelief_depletion", run_hmm_independentsamedist_retainbelief_depletion),
+    ("hmm_independentsamedist_stay_depletion", run_hmm_independentsamedist_stay_depletion),
+    # ("hmm_independentsamedist_turn_depletion", run_hmm_independentsamedist_turn_depletion),
+    # ("hmm_independentsamedist_spatial_depletion", run_hmm_independentsamedist_spatial_depletion),
 
-    # ("run_hmm_independentsamedist_stay_γ2_depletion", run_hmm_independentsamedist_stay_γ2_depletion),
-    # ("run_hmm_independentsamedist_stay_retainbelief_depletion", run_hmm_independentsamedist_stay_retainbelief_depletion),
-    ("run_hmm_independentsamedist_stay_turn_depletion", run_hmm_independentsamedist_stay_turn_depletion),
-    # ("run_hmm_independentsamedist_stay_spatial_depletion", run_hmm_independentsamedist_stay_spatial_depletion),
+    # ("hmm_independentsamedist_stay_γ2_depletion", run_hmm_independentsamedist_stay_γ2_depletion),
+    # ("hmm_independentsamedist_stay_retainbelief_depletion", run_hmm_independentsamedist_stay_retainbelief_depletion),
+    ("hmm_independentsamedist_stay_turn_depletion", run_hmm_independentsamedist_stay_turn_depletion),
+    # ("hmm_independentsamedist_stay_spatial_depletion", run_hmm_independentsamedist_stay_spatial_depletion),
 
-    # ("run_hmm_independentsamedist_turn_γ2_depletion", run_hmm_independentsamedist_turn_γ2_depletion),
-    # ("run_hmm_independentsamedist_spatial_γ2_depletion", run_hmm_independentsamedist_spatial_γ2_depletion),
-    ("run_hmm_independentsamedist_stay_turn_γ2_depletion", run_hmm_independentsamedist_stay_turn_γ2_depletion),
-    # ("run_hmm_independentsamedist_stay_spatial_γ2_depletion", run_hmm_independentsamedist_stay_spatial_γ2_depletion),
+    # ("hmm_independentsamedist_turn_γ2_depletion", run_hmm_independentsamedist_turn_γ2_depletion),
+    # ("hmm_independentsamedist_spatial_γ2_depletion", run_hmm_independentsamedist_spatial_γ2_depletion),
+    ("hmm_independentsamedist_stay_turn_γ2_depletion", run_hmm_independentsamedist_stay_turn_γ2_depletion),
+    # ("hmm_independentsamedist_stay_spatial_γ2_depletion", run_hmm_independentsamedist_stay_spatial_γ2_depletion),
 ]
 base_dir = "../results/hmm_independentsamedist_combined_biases"
 i = parse(Int, ARGS[1])
@@ -98,12 +98,12 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, loocv)
     if loocv
         fname_loocv = fname * "_loocv"
     
-        results = load("$(base_dir)/$(fname).jld2", fname)
+        results = load("$(base_dir)/$(fname).jld2", "results")
         results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results)
-        save("$(base_dir)_loocv/$(fname_loocv).jld2", fname_loocv, results_loocv; compress=true)
+        save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
         results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-        save("$(base_dir)/$(fname).jld2", fname, results; compress=true)
+        save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
         write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
         Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias);
         CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)

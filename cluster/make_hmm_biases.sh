@@ -23,7 +23,7 @@ cat << EOF > slurm_scripts/$SCRIPT_NAME
 
 echo \$SLURM_ARRAY_TASK_ID
 
-JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$SLURM_ARRAY_TASK_ID
+JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$SLURM_ARRAY_TASK_ID false
 EOF
 chmod u+x slurm_scripts/$SCRIPT_NAME
 
@@ -37,7 +37,7 @@ cat << EOF > $LOCAL_RUN_NAME
 #!/bin/bash
 
 for i in {1..$N_CONDS}; do
-    julia ${STUDY_NAME}.jl \$i
+    julia ${STUDY_NAME}.jl \$i false
 done 
 EOF
 chmod u+x $LOCAL_RUN_NAME

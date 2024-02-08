@@ -243,13 +243,15 @@ base_dir = "../results/hmm_partial_independence_biases"
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
-data = load_animal(animal, ".."; depletion=false)
+data = load_animal(animal, "..")
 (fn_name, fn) = fns[fn_ind]
+loocv = parse(Bool, ARGS[2])
 
 @info animal
 @info fn_name
+@info loocv
 
-function run_fn(fn_name, fn, rewscaled, delay_turn_bias)
+function run_fn(fn_name, fn, rewscaled, delay_turn_bias, loocv)
     # Create the base filename
     fname = fn_name
     fname = rewscaled ? fname * "_rewscaled" : fname
@@ -257,13 +259,21 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias)
     fname *= "_$(animal)"
     @info fname
     
-    results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-    save("$(base_dir)/$(fname).jld2", fname, results; compress=true)
-    write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-    Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias);
-    CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
+    if loocv
+        fname_loocv = fname * "_loocv"
+    
+        results = load("$(base_dir)/$(fname).jld2", "results")
+        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results)
+        save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
+    else
+        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
+        save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
+        write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
+        Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias);
+        CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
+    end
 end
 
-# run_fn(fn_name, fn, false, false)
-run_fn(fn_name, fn, true, false)
-# run_fn(fn_name, fn, true, true)
+# run_fn(fn_name, fn, false, false, loocv)
+run_fn(fn_name, fn, true, false, loocv)
+# run_fn(fn_name, fn, true, true, loocv)

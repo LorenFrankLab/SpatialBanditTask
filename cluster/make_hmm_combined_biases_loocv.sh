@@ -4,7 +4,7 @@ set -euo pipefail
 N_CONDS=160
 N_CORES=8
 MAX_TIME=1500
-STUDY_NAME="hmm_combined_biases_loocv"
+STUDY_NAME="hmm_combined_biases"
 
 SCRIPT_NAME="slurm.${STUDY_NAME}.sh"
 SLURM_RUN_NAME="run.slurm.${STUDY_NAME}.sh"
@@ -23,7 +23,7 @@ cat << EOF > slurm_scripts/$SCRIPT_NAME
 
 echo \$SLURM_ARRAY_TASK_ID
 
-JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$SLURM_ARRAY_TASK_ID
+JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$SLURM_ARRAY_TASK_ID true
 EOF
 chmod u+x slurm_scripts/$SCRIPT_NAME
 
@@ -37,7 +37,7 @@ cat << EOF > $LOCAL_RUN_NAME
 #!/bin/bash
 
 for i in {1..$N_CONDS}; do
-    julia ${STUDY_NAME}.jl \$i
+    julia ${STUDY_NAME}.jl \$i true
 done 
 EOF
 chmod u+x $LOCAL_RUN_NAME
