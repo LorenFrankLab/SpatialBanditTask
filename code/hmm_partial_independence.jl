@@ -294,9 +294,11 @@ function hmm_partial_independence_lik(df, ϕcore::Array{Float64, 2}, volatility,
     T_dependent = make_T_dependent(volatility, ncore, nstates)
     T = ρ * T_dependent + (1 - ρ) * T_independent
     # Steady state, eigenvector with eigenvalue 1 (should be largest)
-    statePrior = zeros(U, nstates)
-    # statePrior .= real.(eigvecs(Tfloat)[:,end] / sum(eigvecs(Tfloat)[:,end]))
-    statePrior = T^100 * ones(nstates) / nstates  # Should be close to steady state
+    # Reasonable starting point, reduce number of iterations
+    statePrior_est = zeros(U, nstates)
+    statePrior_est .+= (1/nstates) / 2
+    statePrior_est[1:ncore] .+= (1/ncore) / 2
+    statePrior = T^10 * statePriorEst # Should be close to steady state
 
     lik::U = 0.
 
@@ -771,6 +773,8 @@ function run_hmm_partial_independence(df; maxiter=100, emtol=1e-3, full=true, ex
     rewscaled=false,
     add_leaf=true,
     ρ_default=0.0,
+    loocv_data=nothing,
+    loocv_subject=nothing,
     )
 
     data = copy(df)
@@ -918,22 +922,30 @@ function run_hmm_partial_independence(df; maxiter=100, emtol=1e-3, full=true, ex
         return hmm_partial_independence_lik(data, ϕcore, volatility, ρ, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
-    (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
-    if extended
-        try
-            @info "Running emerrors"
-            (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
-            return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
-        catch err
-            if isa(err, SingularException)
-                @warn "emerrors failed to run. Re-check fitting. Returning EMResults"
-                return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
-            else
-                rethrow()
-            end
+    if !isnothing(loocv_data)
+        if !isnothing(loocv_subject)
+            return loocv_singlesubject(data,subs,loocv_subject,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
+        else
+            return loocv(data,subs,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
         end
     else
-        return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+        (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol, full, maxiter, quiet);
+        if extended
+            try
+                @info "Running emerrors"
+                (standarderrors,pvalues,covmtx) = emerrors(data,subs,x,X,h,betas,sigma,fn)
+                return EMResultsExtended(varnames,betas,sigma,x,l,h,opt_rec,standarderrors,pvalues,covmtx)
+            catch err
+                if isa(err, SingularException)
+                    @warn "emerrors failed to run. Re-check fitting. Returning EMResults"
+                    return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+                else
+                    rethrow()
+                end
+            end
+        else
+            return EMResults(varnames,betas,sigma,x,l,h,opt_rec)
+        end
     end
 end
 
