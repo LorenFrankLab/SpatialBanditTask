@@ -23,7 +23,6 @@ cat << EOF > slurm_scripts/$SCRIPT_NAME
 
 echo \$SLURM_ARRAY_TASK_ID
 
-mkdir -p ../results/hmm_biases
 JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$SLURM_ARRAY_TASK_ID
 EOF
 chmod u+x slurm_scripts/$SCRIPT_NAME
@@ -37,7 +36,6 @@ chmod u+x $SLURM_RUN_NAME
 cat << EOF > $LOCAL_RUN_NAME
 #!/bin/bash
 
-mkdir -p ../results/hmm_biases
 for i in {1..$N_CONDS}; do
     julia ${STUDY_NAME}.jl \$i
 done 
