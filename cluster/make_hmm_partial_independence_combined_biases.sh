@@ -2,7 +2,7 @@
 set -euo pipefail
 
 N_CONDS=105
-N_CORES=8
+N_CORES=16
 MAX_TIME=3000
 STUDY_NAME="hmm_partial_independence_combined_biases"
 
