@@ -295,10 +295,15 @@ function hmm_partial_independence_lik(df, ϕcore::Array{Float64, 2}, volatility,
     T = ρ * T_dependent + (1 - ρ) * T_independent
     # Steady state, eigenvector with eigenvalue 1 (should be largest)
     # Reasonable starting point, reduce number of iterations
+    statePrior = zeros(U, nstates)
     statePriorEst = zeros(U, nstates)
     statePriorEst .+= (1/nstates) / 2
     statePriorEst[1:ncore] .+= (1/ncore) / 2
-    statePrior = T^10 * statePriorEst # Should be close to steady state
+    # Get close to steady state
+    for i in 1:10
+        mul!(statePrior, T, statePriorEst)
+        statePriorEst .= statePrior
+    end
 
     lik::U = 0.
 
