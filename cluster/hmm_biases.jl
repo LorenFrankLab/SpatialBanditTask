@@ -72,13 +72,13 @@ i = parse(Int, ARGS[1])
 animal = animals[animal_ind]
 data = load_animal(animal, "..")
 (fn_name, fn) = fns[fn_ind]
-loocv = parse(Bool, ARGS[2])
+flag_loocv = parse(Bool, ARGS[2])
 
 @info animal
 @info fn_name
-@info loocv
+@info flag_loocv
 
-function run_fn(fn_name, fn, rewscaled, delay_turn_bias, loocv)
+function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv)
     # Create the base filename
     fname = fn_name
     fname = rewscaled ? fname * "_rewscaled" : fname
@@ -86,7 +86,7 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, loocv)
     fname *= "_$(animal)"
     @info fname
     
-    if loocv
+    if flag_loocv
         fname_loocv = fname * "_loocv"
     
         results = load("$(base_dir)/$(fname).jld2", "results")
@@ -101,6 +101,6 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, loocv)
     end
 end
 
-# run_fn(fn_name, fn, false, false, loocv)
-run_fn(fn_name, fn, true, false, loocv)
-# run_fn(fn_name, fn, true, true, loocv)
+# run_fn(fn_name, fn, false, false, flag_loocv)
+run_fn(fn_name, fn, true, false, flag_loocv)
+# run_fn(fn_name, fn, true, true, flag_loocv)
