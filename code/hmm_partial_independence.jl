@@ -1184,3 +1184,55 @@ run_hmm_partial_independence_leaf_stay_turn_leafspatial_γ2_ρ_depletion(data; k
 run_hmm_partial_independence_leaf_stay_turn_leafturn_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, add_ρ=true, kwargs...)
 run_hmm_partial_independence_leaf_stay_spatial_leafspatial_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, add_ρ=true, kwargs...)
 run_hmm_partial_independence_leaf_stay_spatial_leafturn_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, add_ρ=true, kwargs...)
+
+# No Leaf
+run_hmm_partial_independence_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_retainbelief_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_turn_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_spatial_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+
+run_hmm_partial_independence_stay_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_retainbelief_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_turn_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_spatial_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+
+run_hmm_partial_independence_turn_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_spatial_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_turn_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+run_hmm_partial_independence_stay_spatial_γ2_ρ0_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=0.0, kwargs...)
+
+run_hmm_partial_independence_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_retainbelief_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_turn_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_spatial_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+
+run_hmm_partial_independence_stay_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_retainbelief_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_turn_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_spatial_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+
+run_hmm_partial_independence_turn_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_spatial_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_turn_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+run_hmm_partial_independence_stay_spatial_γ2_ρ1_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, ρ_default=1.0, kwargs...)
+
+run_hmm_partial_independence_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_retainbelief_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_turn_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_spatial_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+
+run_hmm_partial_independence_stay_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_retainbelief_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_turn_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_spatial_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+
+run_hmm_partial_independence_turn_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_spatial_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_turn_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_partial_independence_stay_spatial_γ2_ρ_depletion(data; kwargs...) = run_hmm_partial_independence(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)

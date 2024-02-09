@@ -25,7 +25,7 @@ fns = [
     # ("hmm_partial_independence_leaf_ρ_depletion", run_hmm_partial_independence_leaf_ρ_depletion),
     # ("hmm_partial_independence_leaf_γ2_ρ_depletion", run_hmm_partial_independence_leaf_γ2_ρ_depletion),
     # ("hmm_partial_independence_leaf_retainbelief_ρ_depletion", run_hmm_partial_independence_leaf_retainbelief_ρ_depletion),
-    # ("hmm_partial_independence_leaf_stay_ρ_depletion", run_hmm_partial_independence_leaf_stay_ρ_depletion),
+    ("hmm_partial_independence_leaf_stay_ρ_depletion", run_hmm_partial_independence_leaf_stay_ρ_depletion),
     # ("hmm_partial_independence_leaf_turn_ρ_depletion", run_hmm_partial_independence_leaf_turn_ρ_depletion),
     # ("hmm_partial_independence_leaf_spatial_ρ_depletion", run_hmm_partial_independence_leaf_spatial_ρ_depletion),
     # ("hmm_partial_independence_leaf_leafspatial_ρ_depletion", run_hmm_partial_independence_leaf_leafspatial_ρ_depletion),
@@ -61,7 +61,7 @@ fns = [
     # ("hmm_partial_independence_leaf_ρ0_depletion", run_hmm_partial_independence_leaf_ρ0_depletion),
     # ("hmm_partial_independence_leaf_γ2_ρ0_depletion", run_hmm_partial_independence_leaf_γ2_ρ0_depletion),
     # ("hmm_partial_independence_leaf_retainbelief_ρ0_depletion", run_hmm_partial_independence_leaf_retainbelief_ρ0_depletion),
-    # ("hmm_partial_independence_leaf_stay_ρ0_depletion", run_hmm_partial_independence_leaf_stay_ρ0_depletion),
+    ("hmm_partial_independence_leaf_stay_ρ0_depletion", run_hmm_partial_independence_leaf_stay_ρ0_depletion),
     # ("hmm_partial_independence_leaf_turn_ρ0_depletion", run_hmm_partial_independence_leaf_turn_ρ0_depletion),
     # ("hmm_partial_independence_leaf_spatial_ρ0_depletion", run_hmm_partial_independence_leaf_spatial_ρ0_depletion),
     # ("hmm_partial_independence_leaf_leafspatial_ρ0_depletion", run_hmm_partial_independence_leaf_leafspatial_ρ0_depletion),
@@ -97,7 +97,7 @@ fns = [
     # ("hmm_partial_independence_leaf_ρ1_depletion", run_hmm_partial_independence_leaf_ρ1_depletion),
     # ("hmm_partial_independence_leaf_γ2_ρ1_depletion", run_hmm_partial_independence_leaf_γ2_ρ1_depletion),
     # ("hmm_partial_independence_leaf_retainbelief_ρ1_depletion", run_hmm_partial_independence_leaf_retainbelief_ρ1_depletion),
-    # ("hmm_partial_independence_leaf_stay_ρ1_depletion", run_hmm_partial_independence_leaf_stay_ρ1_depletion),
+    ("hmm_partial_independence_leaf_stay_ρ1_depletion", run_hmm_partial_independence_leaf_stay_ρ1_depletion),
     # ("hmm_partial_independence_leaf_turn_ρ1_depletion", run_hmm_partial_independence_leaf_turn_ρ1_depletion),
     # ("hmm_partial_independence_leaf_spatial_ρ1_depletion", run_hmm_partial_independence_leaf_spatial_ρ1_depletion),
     # ("hmm_partial_independence_leaf_leafspatial_ρ1_depletion", run_hmm_partial_independence_leaf_leafspatial_ρ1_depletion),
@@ -129,6 +129,58 @@ fns = [
     ("hmm_partial_independence_leaf_stay_turn_leafturn_γ2_ρ1_depletion", run_hmm_partial_independence_leaf_stay_turn_leafturn_γ2_ρ1_depletion),
     # ("hmm_partial_independence_leaf_stay_spatial_leafspatial_γ2_ρ1_depletion", run_hmm_partial_independence_leaf_stay_spatial_leafspatial_γ2_ρ1_depletion),
     # ("hmm_partial_independence_leaf_stay_spatial_leafturn_γ2_ρ1_depletion", run_hmm_partial_independence_leaf_stay_spatial_leafturn_γ2_ρ1_depletion),
+
+    # No Leaf
+    # ("hmm_partial_independence_ρ0_depletion", run_hmm_partial_independence_ρ0_depletion),
+    # ("hmm_partial_independence_γ2_ρ0_depletion", run_hmm_partial_independence_γ2_ρ0_depletion),
+    # ("hmm_partial_independence_retainbelief_ρ0_depletion", run_hmm_partial_independence_retainbelief_ρ0_depletion),
+    ("hmm_partial_independence_stay_ρ0_depletion", run_hmm_partial_independence_stay_ρ0_depletion),
+    # ("hmm_partial_independence_turn_ρ0_depletion", run_hmm_partial_independence_turn_ρ0_depletion),
+    # ("hmm_partial_independence_spatial_ρ0_depletion", run_hmm_partial_independence_spatial_ρ0_depletion),
+    
+    # ("hmm_partial_independence_stay_γ2_ρ0_depletion", run_hmm_partial_independence_stay_γ2_ρ0_depletion),
+    # ("hmm_partial_independence_stay_retainbelief_ρ0_depletion", run_hmm_partial_independence_stay_retainbelief_ρ0_depletion),
+    ("hmm_partial_independence_stay_turn_ρ0_depletion", run_hmm_partial_independence_stay_turn_ρ0_depletion),
+    ("hmm_partial_independence_stay_spatial_ρ0_depletion", run_hmm_partial_independence_stay_spatial_ρ0_depletion),
+    
+    # ("hmm_partial_independence_turn_γ2_ρ0_depletion", run_hmm_partial_independence_turn_γ2_ρ0_depletion),
+    # ("hmm_partial_independence_spatial_γ2_ρ0_depletion", run_hmm_partial_independence_spatial_γ2_ρ0_depletion),
+    ("hmm_partial_independence_stay_turn_γ2_ρ0_depletion", run_hmm_partial_independence_stay_turn_γ2_ρ0_depletion),
+    ("hmm_partial_independence_stay_spatial_γ2_ρ0_depletion", run_hmm_partial_independence_stay_spatial_γ2_ρ0_depletion),
+    
+    # ("hmm_partial_independence_ρ1_depletion", run_hmm_partial_independence_ρ1_depletion),
+    # ("hmm_partial_independence_γ2_ρ1_depletion", run_hmm_partial_independence_γ2_ρ1_depletion),
+    # ("hmm_partial_independence_retainbelief_ρ1_depletion", run_hmm_partial_independence_retainbelief_ρ1_depletion),
+    ("hmm_partial_independence_stay_ρ1_depletion", run_hmm_partial_independence_stay_ρ1_depletion),
+    # ("hmm_partial_independence_turn_ρ1_depletion", run_hmm_partial_independence_turn_ρ1_depletion),
+    # ("hmm_partial_independence_spatial_ρ1_depletion", run_hmm_partial_independence_spatial_ρ1_depletion),
+    
+    # ("hmm_partial_independence_stay_γ2_ρ1_depletion", run_hmm_partial_independence_stay_γ2_ρ1_depletion),
+    # ("hmm_partial_independence_stay_retainbelief_ρ1_depletion", run_hmm_partial_independence_stay_retainbelief_ρ1_depletion),
+    ("hmm_partial_independence_stay_turn_ρ1_depletion", run_hmm_partial_independence_stay_turn_ρ1_depletion),
+    ("hmm_partial_independence_stay_spatial_ρ1_depletion", run_hmm_partial_independence_stay_spatial_ρ1_depletion),
+    
+    # ("hmm_partial_independence_turn_γ2_ρ1_depletion", run_hmm_partial_independence_turn_γ2_ρ1_depletion),
+    # ("hmm_partial_independence_spatial_γ2_ρ1_depletion", run_hmm_partial_independence_spatial_γ2_ρ1_depletion),
+    ("hmm_partial_independence_stay_turn_γ2_ρ1_depletion", run_hmm_partial_independence_stay_turn_γ2_ρ1_depletion),
+    ("hmm_partial_independence_stay_spatial_γ2_ρ1_depletion", run_hmm_partial_independence_stay_spatial_γ2_ρ1_depletion),
+    
+    # ("hmm_partial_independence_ρ_depletion", run_hmm_partial_independence_ρ_depletion),
+    # ("hmm_partial_independence_γ2_ρ_depletion", run_hmm_partial_independence_γ2_ρ_depletion),
+    # ("hmm_partial_independence_retainbelief_ρ_depletion", run_hmm_partial_independence_retainbelief_ρ_depletion),
+    ("hmm_partial_independence_stay_ρ_depletion", run_hmm_partial_independence_stay_ρ_depletion),
+    # ("hmm_partial_independence_turn_ρ_depletion", run_hmm_partial_independence_turn_ρ_depletion),
+    # ("hmm_partial_independence_spatial_ρ_depletion", run_hmm_partial_independence_spatial_ρ_depletion),
+    
+    # ("hmm_partial_independence_stay_γ2_ρ_depletion", run_hmm_partial_independence_stay_γ2_ρ_depletion),
+    # ("hmm_partial_independence_stay_retainbelief_ρ_depletion", run_hmm_partial_independence_stay_retainbelief_ρ_depletion),
+    ("hmm_partial_independence_stay_turn_ρ_depletion", run_hmm_partial_independence_stay_turn_ρ_depletion),
+    ("hmm_partial_independence_stay_spatial_ρ_depletion", run_hmm_partial_independence_stay_spatial_ρ_depletion),
+    
+    # ("hmm_partial_independence_turn_γ2_ρ_depletion", run_hmm_partial_independence_turn_γ2_ρ_depletion),
+    # ("hmm_partial_independence_spatial_γ2_ρ_depletion", run_hmm_partial_independence_spatial_γ2_ρ_depletion),
+    ("hmm_partial_independence_stay_turn_γ2_ρ_depletion", run_hmm_partial_independence_stay_turn_γ2_ρ_depletion),
+    ("hmm_partial_independence_stay_spatial_γ2_ρ_depletion", run_hmm_partial_independence_stay_spatial_γ2_ρ_depletion),
 ]
 base_dir = "../results/hmm_partial_independence_combined_biases"
 i = parse(Int, ARGS[1])
@@ -142,11 +194,12 @@ flag_loocv = parse(Bool, ARGS[2])
 @info fn_name
 @info flag_loocv
 
-function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv)
+function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv, full)
     # Create the base filename
     fname = fn_name
     fname = rewscaled ? fname * "_rewscaled" : fname
     fname = delay_turn_bias ? fname * "_delayturnbias" : fname
+    fname = full ? fname * "_full" : fname
     fname *= "_$(animal)_combined"
     @info fname
     
@@ -154,10 +207,10 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv)
         fname_loocv = fname * "_loocv"
     
         results = load("$(base_dir)/$(fname).jld2", "results")
-        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results)
+        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results, full)
         save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
-        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
+        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
         write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
         Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias);
@@ -165,6 +218,6 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv)
     end
 end
 
-# run_fn(fn_name, fn, false, false, flag_loocv)
-run_fn(fn_name, fn, true, false, flag_loocv)
-# run_fn(fn_name, fn, true, true, flag_loocv)
+# run_fn(fn_name, fn, false, false, flag_loocv, false)
+run_fn(fn_name, fn, true, false, flag_loocv, false)
+# run_fn(fn_name, fn, true, true, flag_loocv, false)
