@@ -331,12 +331,12 @@ function hmm_independentsamedist_lik(df, volatility, βgo::U, βstay, βleaf, st
                     # First, find the probability of each leaf being .2/.5/.8
                     # Next find entropy of that dist, and mean across all 6 leaves
                     # Large extra allocations happening here
-                    # reward_probs = vcat([
-                    #     sum((ϕ .== .2) .* α; dims=1)
-                    #     sum((ϕ .== .5) .* α; dims=1)
-                    #     sum((ϕ .== .8) .* α; dims=1)
-                    #     ])
-                    reward_probs = vcat(α1, α2, α3, α4, α5, α6)
+                    αs = [α1 α2 α3 α4 α5 α6]
+                    reward_probs = vcat([
+                        sum((ϕ .== .2) .* αs; dims=1)
+                        sum((ϕ .== .5) .* αs; dims=1)
+                        sum((ϕ .== .8) .* αs; dims=1)
+                        ])
                     # First is entropy across all leaves
                     # reward_entropy[i] = sum([-sum(reward_probs[:,j] .* log.(reward_probs[:,j])) for j in 1:6])
                     # Now individual leaves - this represents epistemic uncertainty
