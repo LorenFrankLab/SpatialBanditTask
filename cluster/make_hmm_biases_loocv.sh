@@ -5,18 +5,19 @@ N_CONDS=190
 N_CORES=8
 MAX_TIME=900
 STUDY_NAME="hmm_biases"
+VER_NAME="${STUDY_NAME}_loocv"
 
-SCRIPT_NAME="slurm.${STUDY_NAME}.sh"
-SLURM_RUN_NAME="run.slurm.${STUDY_NAME}.sh"
-LOCAL_RUN_NAME="run.local.${STUDY_NAME}.sh"
+SCRIPT_NAME="slurm.${VER_NAME}.sh"
+SLURM_RUN_NAME="run.slurm.${VER_NAME}.sh"
+LOCAL_RUN_NAME="run.local.${VER_NAME}.sh"
 
-mkdir -p ../results/${STUDY_NAME}
+mkdir -p ../results/${VER_NAME}
 
 cat << EOF > slurm_scripts/$SCRIPT_NAME
 #!/usr/bin/env bash
 
-#SBATCH -J '${STUDY_NAME}'
-#SBATCH -o ../logs/${STUDY_NAME}-%j.out
+#SBATCH -J '${VER_NAME}'
+#SBATCH -o ../logs/${VER_NAME}-%j.out
 #SBATCH -p all
 #SBATCH -t $MAX_TIME
 #SBATCH -c $N_CORES
