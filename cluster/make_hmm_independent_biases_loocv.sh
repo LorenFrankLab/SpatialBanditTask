@@ -2,8 +2,8 @@
 set -euo pipefail
 
 N_CONDS=190
-N_CORES=8
-MAX_TIME=900
+N_CORES=16
+MAX_TIME=1500
 STUDY_NAME="hmm_independent_biases"
 VER_NAME="${STUDY_NAME}_loocv"
 
