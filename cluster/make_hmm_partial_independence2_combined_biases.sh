@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-N_CONDS=195
+N_CONDS=25
 N_CORES=16
 MAX_TIME=3000
 STUDY_NAME="hmm_partial_independence2_combined_biases"
