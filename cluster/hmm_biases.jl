@@ -83,8 +83,8 @@ function run_fn(fn_name, fn, rewscaled, delay_turn_bias, flag_loocv, full)
     fname = fn_name
     fname = rewscaled ? fname * "_rewscaled" : fname
     fname = delay_turn_bias ? fname * "_delayturnbias" : fname
-    fname = full ? fname * "_full" : fname
     fname *= "_$(animal)"
+    fname = full ? fname * "_full" : fname
     @info fname
     
     if flag_loocv
