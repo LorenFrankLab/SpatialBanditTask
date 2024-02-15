@@ -1,10 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-N_CONDS=15
+N_CONDS=40
 N_CORES=16
 MAX_TIME=1500
-STUDY_NAME="hmm_biases"
+STUDY_NAME="hmm_independentsamedist_biases"
 VER_NAME="${STUDY_NAME}_loocv"
 
 SCRIPT_NAME="slurm.${VER_NAME}.sh"
