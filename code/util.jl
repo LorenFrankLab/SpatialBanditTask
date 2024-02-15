@@ -162,6 +162,7 @@ function load_animal_combined(animal, filepath)
     nondep = load_animal(animal, filepath, depletion=false)
     dep = load_animal(animal, filepath, depletion=true)
     dep.daynum .+= maximum(nondep.daynum)
+    dep.daysessionnum .+= maximum(nondep.daysessionnum)
     combined = vcat(nondep, dep)
     return combined
 end
