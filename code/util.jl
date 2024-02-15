@@ -160,9 +160,13 @@ non-depletion sessions
 """
 function load_animal_combined(animal, filepath)
     nondep = load_animal(animal, filepath, depletion=false)
+    nondep.depletion .= false
+    nondep.daysessionnum_cond .= nondep.daysessionnum
     dep = load_animal(animal, filepath, depletion=true)
     dep.daynum .+= maximum(nondep.daynum)
+    dep.daysessionnum_cond .= dep.daysessionnum
     dep.daysessionnum .+= maximum(nondep.daysessionnum)
+    dep.depletion .= true
     combined = vcat(nondep, dep)
     return combined
 end
