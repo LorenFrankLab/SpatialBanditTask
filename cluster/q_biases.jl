@@ -108,6 +108,6 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
     end
 end
 
-# run_fn(fn_name, fn, false, false, flag_loocv, false)
-run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
-# run_fn(fn_name, fn, true, true, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)
