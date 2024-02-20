@@ -931,6 +931,7 @@ run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion(data; kw
 run_hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 
 # Depletion without leaf, might make depletion / non-depletion comparison better?
+run_hmm_independentsamedist_base(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=false, add_depletion_factor=false, kwargs...)
 run_hmm_independentsamedist_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=false, kwargs...)
 run_hmm_independentsamedist_retainbelief(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_depletion_factor=false, kwargs...)
 run_hmm_independentsamedist_stay(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_depletion_factor=false, kwargs...)
