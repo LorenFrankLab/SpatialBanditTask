@@ -25,7 +25,7 @@ fns = [
 # ("hmm_leaf", run_hmm_leaf, true),
 # ("hmm_leaf_γ2", run_hmm_leaf_γ2, true),
 # ("hmm_leaf_retainbelief", run_hmm_leaf_retainbelief, true),
-# ("hmm_leaf_stay", run_hmm_leaf_stay, true),
+("hmm_leaf_stay", run_hmm_leaf_stay, true),
 # ("hmm_leaf_turn", run_hmm_leaf_turn, true),
 # ("hmm_leaf_spatial", run_hmm_leaf_spatial, true),
 # ("hmm_leaf_leafspatial", run_hmm_leaf_leafspatial, true),
@@ -33,12 +33,12 @@ fns = [
 
 # ("hmm_leaf_stay_γ2", run_hmm_leaf_stay_γ2, true),
 # ("hmm_leaf_stay_retainbelief", run_hmm_leaf_stay_retainbelief, true),
-# ("hmm_leaf_stay_turn", run_hmm_leaf_stay_turn, true),
+("hmm_leaf_stay_turn", run_hmm_leaf_stay_turn, true),
 # ("hmm_leaf_stay_spatial", run_hmm_leaf_stay_spatial, true),
 # ("hmm_leaf_stay_leafturn", run_hmm_leaf_stay_leafturn, true),
 # ("hmm_leaf_stay_leafspatial", run_hmm_leaf_stay_leafspatial, true),
-# ("hmm_leaf_stay_turn_leafspatial", run_hmm_leaf_stay_turn_leafspatial, true),
-# ("hmm_leaf_stay_turn_leafturn", run_hmm_leaf_stay_turn_leafturn, true),
+("hmm_leaf_stay_turn_leafspatial", run_hmm_leaf_stay_turn_leafspatial, true),
+("hmm_leaf_stay_turn_leafturn", run_hmm_leaf_stay_turn_leafturn, true),
 # ("hmm_leaf_stay_spatial_leafspatial", run_hmm_leaf_stay_spatial_leafspatial, true),
 # ("hmm_leaf_stay_spatial_leafturn", run_hmm_leaf_stay_spatial_leafturn, true),
 
@@ -66,6 +66,7 @@ fns = [
 # ("hmm_leaf_stay_spatial_leafspatial_depletion", run_hmm_leaf_stay_spatial_leafspatial_depletion, true),
 # ("hmm_leaf_stay_spatial_leafturn_depletion", run_hmm_leaf_stay_spatial_leafturn_depletion, true),
 
+("hmm_base", run_hmm_base, false),
 ("hmm_stay", run_hmm_stay, false),
 ("hmm_stay_turn", run_hmm_stay_turn, false),
 ("hmm_stay_spatial", run_hmm_stay_spatial, false),
@@ -106,6 +107,6 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
     end
 end
 
-# run_fn(fn_name, fn, false, false, flag_loocv, false)
-run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
-# run_fn(fn_name, fn, true, true, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)

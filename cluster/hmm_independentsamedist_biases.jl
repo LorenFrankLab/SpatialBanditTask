@@ -58,6 +58,7 @@ fns = [
 # ("hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2", run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2, true),
 # ("hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2", run_hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2, true),
 
+("hmm_independentsamedist_base", run_hmm_independentsamedist_base, false),
 ("hmm_independentsamedist_stay", run_hmm_independentsamedist_stay, false),
 ("hmm_independentsamedist_stay_turn", run_hmm_independentsamedist_stay_turn, false),
 ("hmm_independentsamedist_stay_spatial", run_hmm_independentsamedist_stay_spatial, false),
@@ -98,6 +99,6 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
     end
 end
 
-# run_fn(fn_name, fn, false, false, flag_loocv, false)
-run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
-# run_fn(fn_name, fn, true, true, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)
