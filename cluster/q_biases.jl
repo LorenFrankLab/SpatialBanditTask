@@ -78,7 +78,7 @@ i = parse(Int, ARGS[1])
 animal = animals[animal_ind]
 data = load_animal(animal, "..")
 (fn_name, fn, fn_add_leaf) = fns[fn_ind]
-loocv = parse(Bool, ARGS[2])
+flag_loocv = parse(Bool, ARGS[2])
 
 @info animal
 @info fn_name
@@ -109,5 +109,5 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
 end
 
 run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
-# run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
 # run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)
