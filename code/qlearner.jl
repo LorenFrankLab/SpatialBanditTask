@@ -98,7 +98,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
             else # Or after we add the turn bias
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
-                lp_stay = exp(Qstem[prevs, i] - logsumexp(view(Qstem, :, i)))
+                lp_stay = Qstem[prevs, i] - logsumexp(view(Qstem, :, i))
                 lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i)) - logsumexp(view(Qstem, :, i))
             end
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
