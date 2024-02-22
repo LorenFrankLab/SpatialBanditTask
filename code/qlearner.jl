@@ -45,8 +45,14 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     lik = 0.
     lik_go = 0.
     lik_stay = 0.
+    lp_stay = 0.
+    lp_turn = 0.
+    lp_go = 0.
     prevs::Int = 0 #stem
     prevl::Int = 0 #leaf
+    stem_stay_p = zeros(U, length(c1))
+    stem_turn_alone_p = zeros(U, length(c1))
+    stem_go_turn_p = zeros(U, length(c1))
 
     Q = zeros(U,3,2,length(c1)+1)
     Qstem = zeros(U,3,length(c1))
@@ -104,9 +110,12 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
                 ll = lp_stay
             else  # If a go trial, p(go) times the left/right turn choice
-                ll = lp_go
-                ll += Qstem[c1[i], i] - logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i))
+                lp_turn = Qstem[c1[i], i] - logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i))
+                ll = lp_go + lp_turn
             end
+            stem_stay_p[i] = exp(lp_stay)
+            stem_turn_alone_p[i] = exp(lp_turn)
+            stem_go_turn_p[i] = exp(lp_go + lp_turn)
         else  # First trial, no biases and just three-way choice
             ll = Qstem[c1[i], i] - logsumexp(view(Qstem, :, i))
         end
@@ -150,6 +159,9 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             Qstem3 = Qstem[3, :],
             Qleaf1 = Qleaf[1, :],
             Qleaf2 = Qleaf[2, :],
+            stem_stay_p = stem_stay_p,
+            stem_turn_alone_p = stem_turn_alone_p,
+            stem_go_turn_p = stem_go_turn_p,
         )
         return -lik, record_df
     else
@@ -477,3 +489,28 @@ run_q_leaf_initialQ_stay_turn_leafspatial_γ2(data; kwargs...) = run_q(data; add
 run_q_leaf_initialQ_stay_turn_leafturn_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
 run_q_leaf_initialQ_stay_spatial_leafspatial_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
 run_q_leaf_initialQ_stay_spatial_leafturn_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+
+# No Leaf
+run_q_base(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, kwargs...)
+run_q_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_γ2=true, kwargs...)
+run_q_retainbelief(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, kwargs...)
+run_q_stay(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, kwargs...)
+run_q_stay_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, kwargs...)
+run_q_stay_retainbelief(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, kwargs...)
+
+run_q_stay_turn(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, kwargs...)
+run_q_stay_spatial(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, kwargs...)
+run_q_stay_turn_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_q_stay_spatial_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
+
+run_q_initialQ(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_initial_Q=true, kwargs...)
+run_q_initialQ_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_retainbelief(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_retainbelief(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_initial_Q=true, kwargs...)
+
+run_q_initialQ_stay_turn(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_spatial(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_turn_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_spatial_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)

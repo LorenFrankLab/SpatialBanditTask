@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-N_CONDS=220
+N_CONDS=320
 N_CORES=8
 MAX_TIME=300
 STUDY_NAME="q_biases"

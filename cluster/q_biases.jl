@@ -71,6 +71,31 @@ fns = [
 ("q_leaf_initialQ_stay_turn_leafturn_γ2", run_q_leaf_initialQ_stay_turn_leafturn_γ2, true),
 ("q_leaf_initialQ_stay_spatial_leafspatial_γ2", run_q_leaf_initialQ_stay_spatial_leafspatial_γ2, true),
 ("q_leaf_initialQ_stay_spatial_leafturn_γ2", run_q_leaf_initialQ_stay_spatial_leafturn_γ2, true),
+
+# No Leaf
+("q_base", run_q_base, false),
+("q_γ2", run_q_γ2, false),
+("q_retainbelief", run_q_retainbelief, false),
+("q_stay", run_q_stay, false),
+("q_stay_γ2", run_q_stay_γ2, false),
+("q_stay_retainbelief", run_q_stay_retainbelief, false),
+
+("q_stay_turn", run_q_stay_turn, false),
+("q_stay_spatial", run_q_stay_spatial, false),
+("q_stay_turn_γ2", run_q_stay_turn_γ2, false),
+("q_stay_spatial_γ2", run_q_stay_spatial_γ2, false),
+
+("q_initialQ", run_q_initialQ, false),
+("q_initialQ_γ2", run_q_initialQ_γ2, false),
+("q_initialQ_retainbelief", run_q_initialQ_retainbelief, false),
+("q_initialQ_stay", run_q_initialQ_stay, false),
+("q_initialQ_stay_γ2", run_q_initialQ_stay_γ2, false),
+("q_initialQ_stay_retainbelief", run_q_initialQ_stay_retainbelief, false),
+
+("q_initialQ_stay_turn", run_q_initialQ_stay_turn, false),
+("q_initialQ_stay_spatial", run_q_initialQ_stay_spatial, false),
+("q_initialQ_stay_turn_γ2", run_q_initialQ_stay_turn_γ2, false),
+("q_initialQ_stay_spatial_γ2", run_q_initialQ_stay_spatial_γ2, false),
 ]
 base_dir = "../results/q_biases"
 i = parse(Int, ARGS[1])
