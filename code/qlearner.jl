@@ -54,6 +54,11 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     stem_stay_p = zeros(U, length(c1))
     stem_turn_alone_p = zeros(U, length(c1))
     stem_go_turn_p = zeros(U, length(c1))
+    stem_1_p = zeros(U, length(c1))
+    stem_2_p = zeros(U, length(c1))
+    stem_3_p = zeros(U, length(c1))
+    leaf_1_p = zeros(U, length(c1))
+    leaf_2_p = zeros(U, length(c1))
 
     Q = zeros(U,3,2,length(c1)+1)
     Qstem = zeros(U,3,length(c1))
@@ -117,6 +122,10 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             stem_stay_p[i] = exp(lp_stay)
             stem_turn_alone_p[i] = exp(lp_turn)
             stem_go_turn_p[i] = exp(lp_go + lp_turn)
+
+            @views stem_1_p[i] = exp(Qstem[1, i] - logsumexp(Qstem[:, i]))
+            @views stem_2_p[i] = exp(Qstem[2, i] - logsumexp(Qstem[:, i]))
+            @views stem_3_p[i] = exp(Qstem[3, i] - logsumexp(Qstem[:, i]))
         else  # First trial, no biases and just three-way choice
             ll = Qstem[c1[i], i] - logsumexp(view(Qstem, :, i))
         end
@@ -136,6 +145,9 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             Qleaf[1, i] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
             # log likelihood of leaf choice on switches only
             lik += βleaf * Qleaf[c2[i], i] - logsumexp(βleaf .* view(Qleaf, :, i));
+
+            @views leaf_1_p[i] = βleaf * Qleaf[1, i] - logsumexp(βleaf .* Qleaf[:, i]);
+            @views leaf_2_p[i] = βleaf * Qleaf[2, i] - logsumexp(βleaf .* Qleaf[:, i]);
         end
 
         # learn about the chosen leaf
@@ -164,7 +176,21 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             stem_stay_p = stem_stay_p,
             stem_turn_alone_p = stem_turn_alone_p,
             stem_go_turn_p = stem_go_turn_p,
+            stem_1_p = stem_1_p,
+            stem_2_p = stem_2_p,
+            stem_3_p = stem_3_p,
+            leaf_1_p = leaf_1_p,
+            leaf_2_p = leaf_2_p,
         )
+        record_df[!, :stem_choice_p] .= 0.0
+        record_df[!, :leaf_choice_p] .= 0.0
+        # Label trials with probability of eventual choice
+        for i in 1:nrow(record_df)
+            s = c1[i]
+            record_df[i, :stem_choice_p] = record_df[i, Symbol("stem_$(s)_p")]
+            l = c2[i]
+            record_df[i, :leaf_choice_p] = record_df[i, Symbol("leaf_$(l)_p")]
+        end
         return -lik, record_df
     else
         return -lik
