@@ -20,6 +20,7 @@ leaf_spatial_bias<[float, float, float]>: Per-stem leaf turn bias
 retain_belief<float>: Fraction of belief state carried over between sessions
 initial_Q<float>: Value between 0 and 1 (will be rescaled) to initialize Q-values with at start of each session
 α<float>: Learning rate
+decay<float>: Decay rate for Q-values (to initial_Q), 1 for full decay, 0 for no decay
 rewscaled<bool>: If true, reward is +1/-1 instead of 0/1
 add_leaf<bool>: Whether to include likelihood for the leaf choice on a stem switch
 record<bool>: Whether to return a record of estimated Q-values and entropy measures
@@ -29,7 +30,7 @@ Returns:
 If 'record':
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
 """
-function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     # mode = "likelihood"
 
     # rename the variables for easy acccess
@@ -138,7 +139,8 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         end
 
         # learn about the chosen leaf
-        Q[:,:,i+1] .= view(Q, :, :, i)
+        # Decay towards initial_Q
+        @views Q[:,:,i+1] .= (1 - decay) .* Q[:, :, i] .+ decay .* initial_Q
         Q[c1[i],c2[i],i+1] = (1-α) * Q[c1[i],c2[i],i] + α * r[i]
 
         prevs = c1[i]
@@ -179,8 +181,8 @@ end
 """
 Q Learning likelihood function for non-optimization usage, e.g. just computing the likelihood for a particular set of parameters
 """
-function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, initial_Q=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias, rewscaled, add_leaf, record)
+function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, initial_Q=0.0, decay=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -217,6 +219,9 @@ function qlik(data, results::T; subject=0, params=nothing, delay_turn_bias=false
     end
     if haskey(d, :initial_Q)
         d[:initial_Q] = 0.5 + 0.5 * erf(d[:initial_Q] / sqrt(2))
+    end
+    if haskey(d, :decay)
+        d[:decay] = 0.5 + 0.5 * erf(d[:decay] / sqrt(2))
     end
     # Combine array parameters
     if haskey(d, :spatial_1)
@@ -256,6 +261,7 @@ leaf_spatial_bias: Per-stem leaf turn bias
 depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
 retain_belief: Fraction of Q-value estimates to retain between sessions
 initial_Q: Allow Q-values to initialize to a value above minimum
+decay: Decay rate for Q-values (to initial_Q)
 rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 """
@@ -269,6 +275,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_γ2=false,
     add_retain_belief=false,
     add_initial_Q=false,
+    add_decay=false,
     delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
@@ -328,6 +335,11 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 1)
         push!(varnames, "initial_Q")
+    end
+    if add_decay
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "decay")
     end
 
     initbetas = hcat(initbetas, 0)
@@ -402,10 +414,17 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
             initial_Q = 0.0
         end
 
+        if add_decay
+            decay = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            i += 1
+        else
+            decay = 0.0
+        end
+
         α = 0.5 + 0.5 * erf(params[i] / sqrt(2))
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, α, delay_turn_bias, rewscaled, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
@@ -490,6 +509,56 @@ run_q_leaf_initialQ_stay_turn_leafturn_γ2(data; kwargs...) = run_q(data; add_β
 run_q_leaf_initialQ_stay_spatial_leafspatial_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
 run_q_leaf_initialQ_stay_spatial_leafturn_γ2(data; kwargs...) = run_q(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
 
+run_q_leaf_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, kwargs...)
+run_q_leaf_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_γ2=true, kwargs...)
+run_q_leaf_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_retain_belief=true, kwargs...)
+run_q_leaf_stay_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, kwargs...)
+run_q_leaf_stay_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_retain_belief=true, kwargs...)
+
+run_q_leaf_stay_turn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, kwargs...)
+run_q_leaf_stay_spatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, kwargs...)
+run_q_leaf_stay_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_turn_bias=true, kwargs...)
+run_q_leaf_stay_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_spatial_bias=true, kwargs...)
+run_q_leaf_stay_turn_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, kwargs...)
+run_q_leaf_stay_turn_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, kwargs...)
+run_q_leaf_stay_spatial_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, kwargs...)
+run_q_leaf_stay_spatial_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, kwargs...)
+
+run_q_leaf_stay_turn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_spatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_turn_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_turn_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_spatial_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_q_leaf_stay_spatial_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
+
+run_q_leaf_initialQ_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_retain_belief=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_retain_belief=true, add_initial_Q=true, kwargs...)
+
+run_q_leaf_initialQ_stay_turn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_turn_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_turn_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_turn_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_leafspatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_leafturn_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_initial_Q=true, kwargs...)
+
+run_q_leaf_initialQ_stay_turn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_turn_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_turn_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_leafspatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_leaf_initialQ_stay_spatial_leafturn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+
 # No Leaf
 run_q_base(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, kwargs...)
 run_q_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_γ2=true, kwargs...)
@@ -514,3 +583,27 @@ run_q_initialQ_stay_turn(data; kwargs...) = run_q(data; add_leaf=false, add_βle
 run_q_initialQ_stay_spatial(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_initial_Q=true, kwargs...)
 run_q_initialQ_stay_turn_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
 run_q_initialQ_stay_spatial_γ2(data; kwargs...) = run_q(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+
+run_q_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, kwargs...)
+run_q_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_γ2=true, kwargs...)
+run_q_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_retain_belief=true, kwargs...)
+run_q_stay_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, kwargs...)
+run_q_stay_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, kwargs...)
+run_q_stay_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, kwargs...)
+
+run_q_stay_turn_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, kwargs...)
+run_q_stay_spatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, kwargs...)
+run_q_stay_turn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_q_stay_spatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
+
+run_q_initialQ_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_initial_Q=true, kwargs...)
+run_q_initialQ_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_retain_belief=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_retainbelief_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_initial_Q=true, kwargs...)
+
+run_q_initialQ_stay_turn_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_spatial_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_turn_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
+run_q_initialQ_stay_spatial_γ2_decay(data; kwargs...) = run_q(data; add_decay=true, add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_initial_Q=true, kwargs...)
