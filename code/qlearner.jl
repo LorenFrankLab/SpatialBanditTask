@@ -90,9 +90,9 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         # mean averages over both leaves
         # 
         # Seems to be faster breaking it up into the three calculations
-        Qstem[1, i] = mean(view(Q, 1, :, i)) * βgo
-        Qstem[2, i] = mean(view(Q, 2, :, i)) * βgo
-        Qstem[3, i] = mean(view(Q, 3, :, i)) * βgo
+        @views Qstem[1, i] = mean(Q[1, :, i]) * βgo
+        @views Qstem[2, i] = mean(Q[2, :, i]) * βgo
+        @views Qstem[3, i] = mean(Q[3, :, i]) * βgo
 
         if prevs > 0
             # this is the (scaled) value of staying with the current stem
@@ -105,18 +105,18 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             # mod1(prevs + 1, 3) and mod1(prevs + 2, 3) give us the other two stems
             # log(exp(Q_x) / sum(exp.(Q))) -> Q_x - logsumexp(Q)
             if delay_turn_bias  # Compute stay/go before we add a turn bias
-                lp_stay = Qstem[prevs, i] - logsumexp(view(Qstem, :, i))
-                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i)) - logsumexp(view(Qstem, :, i))
+                @views lp_stay = Qstem[prevs, i] - logsumexp(Qstem[:, i])
+                @views lp_go = logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i]) - logsumexp(Qstem[:, i])
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
             else # Or after we add the turn bias
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
-                lp_stay = Qstem[prevs, i] - logsumexp(view(Qstem, :, i))
-                lp_go = logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i)) - logsumexp(view(Qstem, :, i))
+                @views lp_stay = Qstem[prevs, i] - logsumexp(Qstem[:, i])
+                @views lp_go = logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i]) - logsumexp(Qstem[:, i])
             end
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
                 ll = lp_stay
             else  # If a go trial, p(go) times the left/right turn choice
-                lp_turn = Qstem[c1[i], i] - logsumexp(view(Qstem, [mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i))
+                @views lp_turn = Qstem[c1[i], i] - logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i])
                 ll = lp_go + lp_turn
             end
             stem_stay_p[i] = exp(lp_stay)
@@ -127,7 +127,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
             @views stem_2_p[i] = exp(Qstem[2, i] - logsumexp(Qstem[:, i]))
             @views stem_3_p[i] = exp(Qstem[3, i] - logsumexp(Qstem[:, i]))
         else  # First trial, no biases and just three-way choice
-            ll = Qstem[c1[i], i] - logsumexp(view(Qstem, :, i))
+            @views ll = Qstem[c1[i], i] - logsumexp(Qstem[:, i])
         end
 
         # log likelihood of stem choice (log of logistic)
@@ -140,11 +140,11 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
 
         ## Leaf
         if ((prevs != c1[i]) && add_leaf)
-            view(Qleaf, :, i) .= view(Q, c1[i], :, i)
+            @views Qleaf[:, i] .= Q[c1[i], :, i]
             # Add leaf bias
             Qleaf[1, i] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
             # log likelihood of leaf choice on switches only
-            lik += βleaf * Qleaf[c2[i], i] - logsumexp(βleaf .* view(Qleaf, :, i));
+            @views lik += βleaf * Qleaf[c2[i], i] - logsumexp(βleaf .* Qleaf[ :, i]);
 
             @views leaf_1_p[i] = βleaf * Qleaf[1, i] - logsumexp(βleaf .* Qleaf[:, i]);
             @views leaf_2_p[i] = βleaf * Qleaf[2, i] - logsumexp(βleaf .* Qleaf[:, i]);
