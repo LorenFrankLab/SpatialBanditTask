@@ -189,7 +189,7 @@ If 'record':
     state_entropy
     reward_entropy
 """
-function hmm_staygo_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βturn, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function hmm_staygo_lik(df, ϕ::Array{Float64, 2}, volatility::U, βgo, βstay, βturn, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
     nstates = size(ϕ, 1)
     ntrials = length(df)
 
