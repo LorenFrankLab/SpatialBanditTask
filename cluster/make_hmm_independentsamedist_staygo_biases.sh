@@ -3,8 +3,8 @@ set -euo pipefail
 
 N_CONDS=15
 N_CORES=8
-MAX_TIME=300
-STUDY_NAME="hmm_staygo_biases"
+MAX_TIME=600
+STUDY_NAME="hmm_independentsamedist_staygo_biases"
 VER_NAME=$STUDY_NAME
 
 SCRIPT_NAME="slurm.${VER_NAME}.sh"
@@ -38,7 +38,7 @@ cat << EOF > $LOCAL_RUN_NAME
 #!/bin/bash
 
 for i in {1..$N_CONDS}; do
-    JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$i false
+    julia ${STUDY_NAME}.jl \$i false
 done 
 EOF
 chmod u+x $LOCAL_RUN_NAME

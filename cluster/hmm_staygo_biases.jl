@@ -22,59 +22,9 @@ function find_Q_vals_by_subject(data, results; add_leaf=true, rewscaled, delay_t
 end
 
 fns = [
-# ("hmm_staygo_leaf", run_hmm_staygo_leaf, true),
-# ("hmm_staygo_leaf_γ2", run_hmm_staygo_leaf_γ2, true),
-# ("hmm_staygo_leaf_retainbelief", run_hmm_staygo_leaf_retainbelief, true),
-# ("hmm_staygo_leaf_stay", run_hmm_staygo_leaf_stay, true),
-# ("hmm_staygo_leaf_turn", run_hmm_staygo_leaf_turn, true),
-# ("hmm_staygo_leaf_spatial", run_hmm_staygo_leaf_spatial, true),
-# ("hmm_staygo_leaf_leafspatial", run_hmm_staygo_leaf_leafspatial, true),
-# ("hmm_staygo_leaf_leafturn", run_hmm_staygo_leaf_leafturn, true),
-
-# ("hmm_staygo_leaf_stay_γ2", run_hmm_staygo_leaf_stay_γ2, true),
-# ("hmm_staygo_leaf_stay_retainbelief", run_hmm_staygo_leaf_stay_retainbelief, true),
-# ("hmm_staygo_leaf_stay_turn", run_hmm_staygo_leaf_stay_turn, true),
-# ("hmm_staygo_leaf_stay_spatial", run_hmm_staygo_leaf_stay_spatial, true),
-# ("hmm_staygo_leaf_stay_leafturn", run_hmm_staygo_leaf_stay_leafturn, true),
-# ("hmm_staygo_leaf_stay_leafspatial", run_hmm_staygo_leaf_stay_leafspatial, true),
-# ("hmm_staygo_leaf_stay_turn_leafspatial", run_hmm_staygo_leaf_stay_turn_leafspatial, true),
-# ("hmm_staygo_leaf_stay_turn_leafturn", run_hmm_staygo_leaf_stay_turn_leafturn, true),
-# ("hmm_staygo_leaf_stay_spatial_leafspatial", run_hmm_staygo_leaf_stay_spatial_leafspatial, true),
-# ("hmm_staygo_leaf_stay_spatial_leafturn", run_hmm_staygo_leaf_stay_spatial_leafturn, true),
-
-# ("hmm_staygo_leaf_turn_γ2", run_hmm_staygo_leaf_turn_γ2, true),
-# ("hmm_staygo_leaf_spatial_γ2", run_hmm_staygo_leaf_spatial_γ2, true),
-# ("hmm_staygo_leaf_turn_leafspatial_γ2", run_hmm_staygo_leaf_turn_leafspatial_γ2, true),
-# ("hmm_staygo_leaf_turn_leafturn_γ2", run_hmm_staygo_leaf_turn_leafturn_γ2, true),
-# ("hmm_staygo_leaf_spatial_leafspatial_γ2", run_hmm_staygo_leaf_spatial_leafspatial_γ2, true),
-# ("hmm_staygo_leaf_spatial_leafturn_γ2", run_hmm_staygo_leaf_spatial_leafturn_γ2, true),
-
-# ("hmm_staygo_leaf_stay_turn_γ2", run_hmm_staygo_leaf_stay_turn_γ2, true),
-# ("hmm_staygo_leaf_stay_spatial_γ2", run_hmm_staygo_leaf_stay_spatial_γ2, true),
-# ("hmm_staygo_leaf_stay_leafturn_γ2", run_hmm_staygo_leaf_stay_leafturn_γ2, true),
-# ("hmm_staygo_leaf_stay_leafspatial_γ2", run_hmm_staygo_leaf_stay_leafspatial_γ2, true),
-# ("hmm_staygo_leaf_stay_turn_leafspatial_γ2", run_hmm_staygo_leaf_stay_turn_leafspatial_γ2, true),
-# ("hmm_staygo_leaf_stay_turn_leafturn_γ2", run_hmm_staygo_leaf_stay_turn_leafturn_γ2, true),
-# ("hmm_staygo_leaf_stay_spatial_leafspatial_γ2", run_hmm_staygo_leaf_stay_spatial_leafspatial_γ2, true),
-# ("hmm_staygo_leaf_stay_spatial_leafturn_γ2", run_hmm_staygo_leaf_stay_spatial_leafturn_γ2, true),
-
-# Test against depletion code
-# ("hmm_staygo_leaf_stay_turn_depletion", run_hmm_staygo_leaf_stay_turn_depletion, true),
-# ("hmm_staygo_leaf_stay_spatial_depletion", run_hmm_staygo_leaf_stay_spatial_depletion, true),
-# ("hmm_staygo_leaf_stay_turn_leafspatial_depletion", run_hmm_staygo_leaf_stay_turn_leafspatial_depletion, true),
-# ("hmm_staygo_leaf_stay_turn_leafturn_depletion", run_hmm_staygo_leaf_stay_turn_leafturn_depletion, true),
-# ("hmm_staygo_leaf_stay_spatial_leafspatial_depletion", run_hmm_staygo_leaf_stay_spatial_leafspatial_depletion, true),
-# ("hmm_staygo_leaf_stay_spatial_leafturn_depletion", run_hmm_staygo_leaf_stay_spatial_leafturn_depletion, true),
-
-("hmm_staygo_stay", run_hmm_staygo_stay, false),
-("hmm_staygo_stay_turn", run_hmm_staygo_stay_turn, false),
-("hmm_staygo_leaf_stay_turn_leafspatial", run_hmm_staygo_stay_turn, false),
-# ("hmm_staygo_stay_spatial", run_hmm_staygo_stay_spatial, false),
-
-("hmm_staygo_Bturn_stay", run_hmm_staygo_Bturn_stay, false),
-("hmm_staygo_Bturn_stay_turn", run_hmm_staygo_Bturn_stay_turn, false),
-("hmm_staygo_Bturn_leaf_stay_turn_leafspatial", run_hmm_staygo_stay_turn, false),
-# ("hmm_staygo_Bturn_stay_spatial", run_hmm_staygo_Bturn_stay_spatial, false),
+("hmm_staygo_Bgo_Bstay_Bturn_leaf_stay_turn_leafspatial", run_hmm_staygo_Bgo_Bstay_Bturn_leaf_stay_turn_leafspatial, true),
+("hmm_staygo_Bstay_Bturn_leaf_stay_turn_leafspatial", run_hmm_staygo_Bstay_Bturn_leaf_stay_turn_leafspatial, true),
+("hmm_staygo_Bgo_Bstay_leaf_stay_turn_leafspatial", run_hmm_staygo_Bgo_Bstay_leaf_stay_turn_leafspatial, true),
 ]
 base_dir = "../results/hmm_staygo_biases"
 i = parse(Int, ARGS[1])
