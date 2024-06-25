@@ -81,7 +81,7 @@ function load_animal(animal, filepath; depletion=false)
     df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
 
     # Code sessions contiguously across days
-    datesessions = string.(df.date) .* string.(df.session)
+    datesessions = string.(df.date) .* "_" .* string.(df.session)
     uniq_datesessions = unique(datesessions)
     df.daysessionnum = [minimum(findall(datesessions[i] .== uniq_datesessions)) for i in 1:nrow(df)]
 
