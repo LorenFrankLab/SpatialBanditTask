@@ -180,3 +180,11 @@ function load_all_data(filepath)
     end
     vcat(dfs...)
 end
+
+function unitnorm(x)
+    0.5 + 0.5 * erf(x / sqrt(2))
+end
+
+function invunitnorm(x)
+    sqrt(2) * erfinv(2x - 1)
+end
