@@ -70,7 +70,7 @@ fns = [
 # ("hmm_leaf_stay_spatial_leafspatial_depletion", run_hmm_leaf_stay_spatial_leafspatial_depletion, true),
 # ("hmm_leaf_stay_spatial_leafturn_depletion", run_hmm_leaf_stay_spatial_leafturn_depletion, true),
 ]
-base_dir = "../results/hmm_biases"
+base_dir = "../results/hmm_base_biases"
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
