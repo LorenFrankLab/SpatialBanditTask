@@ -122,6 +122,13 @@ function get_contingencies_base()
         [0.2000, 0.2000, 0.2000, 0.2000, 0.2000, 0.8000],     
         )')
 end
+function get_contingencies_threeway_base()
+    return Matrix(hcat(
+        [0.5000, 0.5000, 0.2000, 0.2000, 0.2000, 0.2000],
+        [0.2000, 0.2000, 0.5000, 0.5000, 0.2000, 0.2000],
+        [0.2000, 0.2000, 0.2000, 0.2000, 0.5000, 0.5000],
+        )')    
+end
 
 import Base.length
 length(df::U) where U <: DataFrame = size(df, 1)

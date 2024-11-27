@@ -171,6 +171,31 @@ function load_animal_combined(animal, filepath)
     return combined
 end
 
+function load_allanimals_combined(filepath)
+    combined = []
+    for animal in animals
+        nondep = load_animal(animal, filepath, depletion=false)
+        nondep.depletion .= false
+        nondep.animal .= animal
+        nondep.daysessionnum_cond .= nondep.daysessionnum
+        if length(combined) > 0
+            nondep.daynum .+= maximum(combined.daynum)
+            nondep.daysessionnum .+= maximum(combined.daysessionnum)
+            combined = vcat(combined, nondep)
+        else
+            combined = nondep
+        end
+        dep = load_animal(animal, filepath, depletion=true)
+        dep.daynum .+= maximum(combined.daynum)
+        dep.animal .= animal
+        dep.daysessionnum_cond .= dep.daysessionnum
+        dep.daysessionnum .+= maximum(combined.daysessionnum)
+        dep.depletion .= true
+        combined = vcat(combined, dep)
+    end
+    return combined
+end
+
 function load_all_data(filepath)
     dfs = []
     for animal in animals
