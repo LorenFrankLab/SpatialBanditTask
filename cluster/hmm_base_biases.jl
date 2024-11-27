@@ -99,7 +99,7 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
         results_loocv = fn(data; ϕ=get_contingencies_base(), extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results, full)
         save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
-        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, full)
+        results = fn(data; ϕ=get_contingencies_base(), extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
         write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
         Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf);
