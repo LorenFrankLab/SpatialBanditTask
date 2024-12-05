@@ -662,6 +662,7 @@ add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 """
 function run_hmm_turnpredict(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     ϕ=nothing,
+    add_βstay=false,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -684,10 +685,15 @@ function run_hmm_turnpredict(df; maxiter=100, emtol=1e-3, full=true, extended=fa
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
 
-    initbetas = [0 0 0]
-    initsigma = [1., 5, 5]
-    varnames = ["volatility", "βgo", "βstay"]
+    initbetas = [0 0]
+    initsigma = [1., 5]
+    varnames = ["volatility", "βgo"]
 
+    if add_βstay
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βstay")
+    end
     if add_βleaf
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 5)
@@ -741,8 +747,14 @@ function run_hmm_turnpredict(df; maxiter=100, emtol=1e-3, full=true, extended=fa
 
         volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-1 using standard normal CDF)
         βgo = params[2]
-        βstay = params[3]
-        i = 4
+        i = 3
+
+        if add_βstay
+            βstay = params[i] # beta for stay choice on switch
+            i += 1
+        else
+            βstay = 0.0
+        end
 
         if add_βleaf
             βleaf = params[i] # beta for leaf choice on switch
