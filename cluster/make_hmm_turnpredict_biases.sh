@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-N_CONDS=40
+N_CONDS=50
 N_CORES=8
 MAX_TIME=600
 STUDY_NAME="hmm_turnpredict_biases"
