@@ -93,11 +93,11 @@ end
 function hmm_independentsamedist_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_spatial_bias)
     # Leaf choice
     Qleaf .= Q[stemchoice]
+    Qleaf .= Qleaf .* βleaf
     # Add turn bias
     Qleaf[1] += leaf_turn_bias
     # Add per-stem turn biases
     Qleaf[1] += leaf_spatial_bias[stemchoice]
-    Qleaf .= Qleaf .* βleaf
 end
 
 leafpairs = Dict(

@@ -141,13 +141,14 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
         ## Leaf
         if ((prevs != c1[i]) && add_leaf)
             @views Qleaf[:, i] .= Q[c1[i], :, i]
+            @views Qleaf[:, i] .*= βleaf
             # Add leaf bias
             Qleaf[1, i] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
             # log likelihood of leaf choice on switches only
-            @views lik += βleaf * Qleaf[c2[i], i] - logsumexp(βleaf .* Qleaf[ :, i]);
+            @views lik += Qleaf[c2[i], i] - logsumexp(Qleaf[ :, i]);
 
-            @views leaf_1_p[i] = βleaf * Qleaf[1, i] - logsumexp(βleaf .* Qleaf[:, i]);
-            @views leaf_2_p[i] = βleaf * Qleaf[2, i] - logsumexp(βleaf .* Qleaf[:, i]);
+            @views leaf_1_p[i] = Qleaf[1, i] - logsumexp(Qleaf[:, i]);
+            @views leaf_2_p[i] = Qleaf[2, i] - logsumexp(Qleaf[:, i]);
         end
 
         # learn about the chosen leaf
