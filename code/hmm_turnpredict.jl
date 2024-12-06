@@ -332,10 +332,10 @@ function hmm_turnpredict_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βs
                         lik += lp_turn_alone
                     end
                 else  # First trial, just a three-way choice
-                    lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
+                    # lik += Qstem[stemchoice[t]] - logsumexp(Qstem)
                 end
 
-                if (add_leaf && (prevs != stemchoice[t]))  # If stem switch, add leaf bias
+                if (add_leaf && (prevs > 0) && (prevs != stemchoice[t]))  # If stem switch, add leaf bias
                     hmm_turnpredict_lik_leaf_inner!(Qleaf, Q, stemchoice[t], βleaf, leaf_turn_bias, leaf_spatial_bias)
                     lik += (Qleaf[leafchoice[t]] - logsumexp(Qleaf))
                 end
