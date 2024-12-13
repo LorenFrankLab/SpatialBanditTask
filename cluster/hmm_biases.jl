@@ -8,19 +8,6 @@ include("../code/hmm.jl")
 include("../code/util.jl")
 include("../code/em_scripts.jl")
 
-function find_Q_vals_by_day(data, results; add_leaf=true, rewscaled, delay_turn_bias)
-    ndays = maximum(data.daynum)
-    liks = zeros(ndays)
-    dfs = []
-    for i in 1:ndays
-        (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
-        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
-        push!(dfs, df)
-    end
-    record_df = vcat(dfs...) # Combine all session results
-    hcat(data, record_df) # Append columns to the original data
-end
-
 fns = [
 # ("hmm_leaf", run_hmm_leaf, true),
 # ("hmm_leaf_γ2", run_hmm_leaf_γ2, true),
@@ -72,6 +59,7 @@ fns = [
 ("hmm_stay_spatial", run_hmm_stay_spatial, false),
 ]
 base_dir = "../results/hmm_biases"
+subjlevel = :daynum
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
@@ -82,6 +70,7 @@ flag_loocv = parse(Bool, ARGS[2])
 @info animal
 @info fn_name
 @info flag_loocv
+@info subjlevel
 
 function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv, full)
     # Create the base filename
@@ -96,13 +85,13 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
         fname_loocv = fname * "_loocv"
     
         results = load("$(base_dir)/$(fname).jld2", "results")
-        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results, full)
+        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, subjlevel, loocv_data=results, full)
         save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
-        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, full)
+        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, subjlevel, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
         write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-        Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf);
+        Q = find_Q_vals_by_day_hmm(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf);
         CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
     end
 end

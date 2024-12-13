@@ -657,6 +657,7 @@ depletion_factor: Fraction of value retained when remaining at the same leaf for
 retain_belief: Fraction of belief in HMM state to retain between sessions
 rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
+subjlevel: How to split the dataset - either :daynum or :daysessionnum
 """
 function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     ϕ=nothing,
@@ -674,10 +675,11 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     add_leaf=true,
     loocv_data=nothing,
     loocv_subject=nothing,
+    subjlevel=:daynum,
     )
 
     data = copy(df)
-    data[:, :sub] = data[:, :daynum]
+    data[:, :sub] = data[:, subjlevel]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
@@ -842,6 +844,19 @@ function find_Q_vals_by_day_hmm(data, results; add_leaf=true, rewscaled, delay_t
     dfs = []
     for i in 1:ndays
         (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
+        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+        push!(dfs, df)
+    end
+    record_df = vcat(dfs...) # Combine all session results
+    hcat(data, record_df) # Append columns to the original data
+end
+
+function find_Q_vals_by_session_hmm(data, results; add_leaf=true, rewscaled, delay_turn_bias)
+    nsessions = maximum(data.daysessionnum)
+    liks = zeros(nsessions)
+    dfs = []
+    for i in 1:nsessions
+        (liks[i], df) = hmm_lik(view(data, data.daysessionnum .== i, :), get_contingencies(), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end
