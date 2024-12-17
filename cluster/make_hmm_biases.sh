@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-N_CONDS=35
+N_CONDS=60
 N_CORES=8
 MAX_TIME=600
 STUDY_NAME="hmm_biases"

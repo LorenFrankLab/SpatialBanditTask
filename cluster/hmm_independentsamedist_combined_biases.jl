@@ -31,33 +31,34 @@ fns = [
     # ("hmm_independentsamedist_leaf_leafspatial_depletion", run_hmm_independentsamedist_leaf_leafspatial_depletion, true),
     # ("hmm_independentsamedist_leaf_leafturn_depletion", run_hmm_independentsamedist_leaf_leafturn_depletion, true),
 
-    ("hmm_independentsamedist_leaf_stay_γ2_depletion", run_hmm_independentsamedist_leaf_stay_γ2_depletion, true),
-    ("hmm_independentsamedist_leaf_stay_retainbelief_depletion", run_hmm_independentsamedist_leaf_stay_retainbelief_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_γ2_depletion", run_hmm_independentsamedist_leaf_stay_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_retainbelief_depletion", run_hmm_independentsamedist_leaf_stay_retainbelief_depletion, true),
     ("hmm_independentsamedist_leaf_stay_turn_depletion", run_hmm_independentsamedist_leaf_stay_turn_depletion, true),
     # ("hmm_independentsamedist_leaf_stay_spatial_depletion", run_hmm_independentsamedist_leaf_stay_spatial_depletion, true),
-    ("hmm_independentsamedist_leaf_stay_leafspatial_depletion", run_hmm_independentsamedist_leaf_stay_leafspatial_depletion, true),
-    ("hmm_independentsamedist_leaf_stay_leafturn_depletion", run_hmm_independentsamedist_leaf_stay_leafturn_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_leafspatial_depletion", run_hmm_independentsamedist_leaf_stay_leafspatial_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_leafturn_depletion", run_hmm_independentsamedist_leaf_stay_leafturn_depletion, true),
     ("hmm_independentsamedist_leaf_stay_turn_leafspatial_depletion", run_hmm_independentsamedist_leaf_stay_turn_leafspatial_depletion, true),
     ("hmm_independentsamedist_leaf_stay_turn_leafturn_depletion", run_hmm_independentsamedist_leaf_stay_turn_leafturn_depletion, true),
     # ("hmm_independentsamedist_leaf_stay_spatial_leafspatial_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_depletion, true),
     # ("hmm_independentsamedist_leaf_stay_spatial_leafturn_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafturn_depletion, true),
 
-    ("hmm_independentsamedist_leaf_turn_γ2_depletion", run_hmm_independentsamedist_leaf_turn_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_turn_γ2_depletion", run_hmm_independentsamedist_leaf_turn_γ2_depletion, true),
     # ("hmm_independentsamedist_leaf_spatial_γ2_depletion", run_hmm_independentsamedist_leaf_spatial_γ2_depletion, true),
-    ("hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion, true),
-    ("hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion, true),
     # ("hmm_independentsamedist_leaf_spatial_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_spatial_leafspatial_γ2_depletion, true),
     # ("hmm_independentsamedist_leaf_spatial_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_spatial_leafturn_γ2_depletion, true),
 
     ("hmm_independentsamedist_leaf_stay_turn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_turn_γ2_depletion, true),
-    # ("hmm_independentsamedist_leaf_stay_spatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_γ2_depletion, true),
-    ("hmm_independentsamedist_leaf_stay_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_leafturn_γ2_depletion, true),
-    ("hmm_independentsamedist_leaf_stay_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_leafspatial_γ2_depletion, true),
+    ("hmm_independentsamedist_leaf_stay_spatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_leafturn_γ2_depletion, true),
+    # ("hmm_independentsamedist_leaf_stay_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_leafspatial_γ2_depletion, true),
     ("hmm_independentsamedist_leaf_stay_turn_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_turn_leafspatial_γ2_depletion, true),
     ("hmm_independentsamedist_leaf_stay_turn_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_turn_leafturn_γ2_depletion, true),
     # ("hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion, true),
     # ("hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion", run_hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion, true),
 
+    ## Non-leaf
     # ("hmm_independentsamedist_depletion", run_hmm_independentsamedist_depletion, false),
     # ("hmm_independentsamedist_γ2_depletion", run_hmm_independentsamedist_γ2_depletion, false),
     # ("hmm_independentsamedist_retainbelief_depletion", run_hmm_independentsamedist_retainbelief_depletion, false),
@@ -68,14 +69,15 @@ fns = [
     # ("hmm_independentsamedist_stay_γ2_depletion", run_hmm_independentsamedist_stay_γ2_depletion, false),
     # ("hmm_independentsamedist_stay_retainbelief_depletion", run_hmm_independentsamedist_stay_retainbelief_depletion, false),
     ("hmm_independentsamedist_stay_turn_depletion", run_hmm_independentsamedist_stay_turn_depletion, false),
-    # ("hmm_independentsamedist_stay_spatial_depletion", run_hmm_independentsamedist_stay_spatial_depletion, false),
+    ("hmm_independentsamedist_stay_spatial_depletion", run_hmm_independentsamedist_stay_spatial_depletion, false),
 
     # ("hmm_independentsamedist_turn_γ2_depletion", run_hmm_independentsamedist_turn_γ2_depletion, false),
     # ("hmm_independentsamedist_spatial_γ2_depletion", run_hmm_independentsamedist_spatial_γ2_depletion, false),
     ("hmm_independentsamedist_stay_turn_γ2_depletion", run_hmm_independentsamedist_stay_turn_γ2_depletion, false),
-    # ("hmm_independentsamedist_stay_spatial_γ2_depletion", run_hmm_independentsamedist_stay_spatial_γ2_depletion, false),
+    ("hmm_independentsamedist_stay_spatial_γ2_depletion", run_hmm_independentsamedist_stay_spatial_γ2_depletion, false),
 ]
 base_dir = "../results/hmm_independentsamedist_combined_biases"
+subjlevel = :daynum
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
@@ -100,17 +102,17 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
         fname_loocv = fname * "_loocv"
     
         results = load("$(base_dir)/$(fname).jld2", "results")
-        results_loocv = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, loocv_data=results, full)
+        results_loocv = fn(data; extended=true, rewscaled, delay_turn_bias, subjlevel, loocv_data=results, full)
         save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
-        results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, full)
+        results = fn(data; extended=true, rewscaled, delay_turn_bias, subjlevel, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
-        write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-        Q = find_Q_vals_by_day(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf);
+        write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled, delay_turn_bias)
+        Q = find_Q_vals_hmm_independentsamedist(data, results; rewscaled, delay_turn_bia, add_leaf=fn_add_leaf, subjlevel);
         CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
     end
 end
 
-# run_fn(fn_name, fn, false, false, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
 run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
-# run_fn(fn_name, fn, true, true, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)
