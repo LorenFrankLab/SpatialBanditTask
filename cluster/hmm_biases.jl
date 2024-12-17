@@ -91,11 +91,11 @@ function run_fn(fn_name, fn, fn_add_leaf, rewscaled, delay_turn_bias, flag_loocv
         results = fn(data; extended=true, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, subjlevel, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
         write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
-        Q = find_Q_vals_by_day_hmm(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf);
+        Q = find_Q_vals_hmm(data, results; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, add_leaf=fn_add_leaf, subjlevel);
         CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
     end
 end
 
 run_fn(fn_name, fn, fn_add_leaf, false, false, flag_loocv, false)
-# run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, true, false, flag_loocv, false)
 # run_fn(fn_name, fn, fn_add_leaf, true, true, flag_loocv, false)

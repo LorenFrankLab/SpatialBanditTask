@@ -838,25 +838,25 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     end
 end
 
-function find_Q_vals_by_day_hmm(data, results; add_leaf=true, rewscaled, delay_turn_bias)
-    ndays = maximum(data.daynum)
-    liks = zeros(ndays)
-    dfs = []
-    for i in 1:ndays
-        (liks[i], df) = hmm_lik(view(data, data.daynum .== i, :), get_contingencies(), results;
-        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
-        push!(dfs, df)
-    end
-    record_df = vcat(dfs...) # Combine all session results
-    hcat(data, record_df) # Append columns to the original data
-end
+"""
+Re-runs the HMM to compute Q-values and other decision variables
 
-function find_Q_vals_by_session_hmm(data, results; add_leaf=true, rewscaled, delay_turn_bias)
-    nsessions = maximum(data.daysessionnum)
-    liks = zeros(nsessions)
+Takes as input the rat data and output from EM
+
+A few variables are not encoded in the EM results, so they are passed in as kwargs:
+add_leaf: Whether to include likelihood for the leaf choice on a stem switch
+rewscaled: If true, reward is +1/-1 instead of 0/1
+delay_turn_bias: Whether to delay the addition of the turn bias
+subjlevel: How to split the dataset - either :daynum or :daysessionnum
+"""
+function find_Q_vals_hmm(df, results; add_leaf=true, rewscaled, delay_turn_bias, subjlevel=:daynum)
+    data = copy(df)
+    data[:, :sub] = data[:, subjlevel]
+    nsubjs = maximum(data[:, subjlevel])
+    liks = zeros(nsubjs)
     dfs = []
-    for i in 1:nsessions
-        (liks[i], df) = hmm_lik(view(data, data.daysessionnum .== i, :), get_contingencies(), results;
+    for i in 1:nsubjs
+        (liks[i], df) = hmm_lik(view(data, data[:, subjlevel] .== i, :), get_contingencies(), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end
