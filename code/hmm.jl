@@ -177,6 +177,7 @@ volatility<float>: Assumed chance of a switch
 βgo<float>: Scaling for alternate stems
 βstay<float>: Scaling for current stem
 βleaf<float>: Beta weight for leaf choice softmax
+stay_bias<float>: Offset added to stay choice (cost to go)
 turn_bias<float>: Offset added to (leftward?) choice
 spatial_bias<[float, float, float]>: Per-stem offset added to (leftward?) choice
 leaf_turn_bias<float>: Offset added to 'first' leaf on entering a new stem
@@ -196,7 +197,8 @@ If 'record':
     state_entropy
     reward_entropy
 """
-function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
+    U = promote_type(eltype(βstay), eltype(stay_bias))  # this is a bit of a hack so that we can optionally have either of these fixed at 0
     nstates = size(ϕ, 1)
     ntrials = length(df)
 
@@ -258,8 +260,8 @@ function hmm_lik(df, ϕ::Array{Float64, 2}, volatility, βgo::U, βstay, βleaf,
     depletion = ones(U, 6)
 
     # (dates, sessions, leaf, leafchoice, stemchoice, reward) = hmm_lik_extract_df(df)
-    dates = df.date
-    sessions = df.session
+    dates = df.daynum
+    sessions = df.daysessionnum
     leaf = df.leaf
     leafchoice = df.leafchoice
     stemchoice = df.stemchoice
@@ -606,16 +608,16 @@ function hmm_lik(data, ϕ, results::T; subject=0, params=nothing, delay_turn_bia
     end
 
     if haskey(d, :volatility)
-        d[:volatility] = 0.5 + 0.5 * erf(d[:volatility] / sqrt(2))
+        d[:volatility] = unitnorm(d[:volatility])
     end
     if haskey(d, :γ2)
-        d[:γ2] = 0.5 + 0.5 * erf(d[:γ2] / sqrt(2))
+        d[:γ2] = unitnorm(d[:γ2])
     end
     if haskey(d, :depletion_factor)
-        d[:depletion_factor] = 0.5 + 0.5 * erf(d[:depletion_factor] / sqrt(2))
+        d[:depletion_factor] = unitnorm(d[:depletion_factor])
     end
     if haskey(d, :retain_belief)
-        d[:retain_belief] = 0.5 + 0.5 * erf(d[:retain_belief] / sqrt(2))
+        d[:retain_belief] = unitnorm(d[:retain_belief])
     end
     # Combine array parameters
     if haskey(d, :spatial_1)
@@ -646,8 +648,11 @@ extended: Try to calculate p-values and group-level covariance
 quiet: Silence progress
 
 ϕ: Custom set of contingencies. If unset, use default get_contingencies(n=3)
+volatility: Assumed chance of a switch
+βgo: Scaling for alternate stems
+βstay: Scaling for current stem
 βleaf: Beta weight for leaf choice softmax
-stay_bias: Offset added to staying at current stem
+stay_bias: Offset added to stay choice (cost to go)
 turn_bias: Offset added to (leftward?) choice
 spatial_bias: Per-stem offset added to (leftward?) choice
 leaf_turn_bias: Offset added to 'first' leaf on entering a new stem
@@ -661,6 +666,9 @@ subjlevel: How to split the dataset - either :daynum or :daysessionnum
 """
 function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
     ϕ=nothing,
+    add_volatility=true,
+    add_βgo=true,
+    add_βstay=true,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -684,10 +692,25 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
 
-    initbetas = [0 0 0]
-    initsigma = [1., 5, 5]
-    varnames = ["volatility", "βgo", "βstay"]
+    initbetas = Matrix{Float64}(undef, 1, 0)
+    initsigma = Vector{Float64}(undef, 0)
+    varnames = Vector{String}(undef, 0)
 
+    if add_volatility
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "volatility")
+    end
+    if add_βgo
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βgo")
+    end
+    if add_βstay
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βstay")
+    end
     if add_βleaf
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 5)
@@ -739,10 +762,28 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
             ϕ = get_contingencies()
         end
 
-        volatility = 0.5 + 0.5 * erf(params[1] / sqrt(2)) # volatility (squashed to 0-1 using standard normal CDF)
-        βgo = params[2]
-        βstay = params[3]
-        i = 4
+        i = 1
+
+        if add_volatility
+            volatility = unitnorm(params[i])
+            i += 1
+        else
+            volatility = 0.0
+        end
+
+        if add_βgo
+            βgo = params[i] # beta for go choice
+            i += 1
+        else
+            βgo = 0.0
+        end
+
+        if add_βstay
+            βstay = params[i] # beta for stay choice
+            i += 1
+        else
+            βstay = 0.0
+        end
 
         if add_βleaf
             βleaf = params[i] # beta for leaf choice on switch
@@ -787,21 +828,21 @@ function run_hmm(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=f
         end
 
         if add_γ2
-            γ2 = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            γ2 = unitnorm(params[i])
             i += 1
         else
             γ2 = 0.0
         end
 
         if add_depletion_factor
-            depletion_factor = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            depletion_factor = unitnorm(params[i])
             i += 1
         else
             depletion_factor = 1.0
         end
 
         if add_retain_belief
-            retain_belief = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            retain_belief = unitnorm(params[i])
             i += 1
         else
             retain_belief = 0.0
@@ -852,11 +893,11 @@ subjlevel: How to split the dataset - either :daynum or :daysessionnum
 function find_Q_vals_hmm(df, results; add_leaf=true, rewscaled, delay_turn_bias, subjlevel=:daynum)
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
-    nsubjs = maximum(data[:, subjlevel])
+    nsubjs = maximum(data.sub)
     liks = zeros(nsubjs)
     dfs = []
     for i in 1:nsubjs
-        (liks[i], df) = hmm_lik(view(data, data[:, subjlevel] .== i, :), get_contingencies(), results;
+        (liks[i], df) = hmm_lik(view(data, data.sub .== i, :), get_contingencies(), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end

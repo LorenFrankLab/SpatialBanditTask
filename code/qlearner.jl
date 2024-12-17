@@ -17,6 +17,7 @@ spatial_bias<[float, float, float]>: Per-stem offset added to (leftward?) choice
 leaf_turn_bias<float>: Offset added to 'first' leaf on entering a new stem
 leaf_spatial_bias<[float, float, float]>: Per-stem leaf turn bias
 γ2<float>: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
+epletion_factor<float>: Fraction of value retained when remaining at the same leaf for multiple trials
 retain_belief<float>: Fraction of belief state carried over between sessions
 initial_Q<float>: Value between 0 and 1 (will be rescaled) to initialize Q-values with at start of each session
 α<float>: Learning rate
@@ -30,7 +31,8 @@ Returns:
 If 'record':
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
 """
-function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where U
+function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
+    U = promote_type(eltype(βstay), eltype(stay_bias))  # this is a bit of a hack so that we can optionally have either of these fixed at 0
     # mode = "likelihood"
 
     # rename the variables for easy acccess
@@ -59,6 +61,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     stem_3_p = zeros(U, length(c1))
     leaf_1_p = zeros(U, length(c1))
     leaf_2_p = zeros(U, length(c1))
+    depletion = ones(U, 6)
 
     Q = zeros(U,3,2,length(c1)+1)
     Qstem = zeros(U,3,length(c1))
@@ -74,7 +77,7 @@ function qlik(data, βgo::U, βstay, βleaf, stay_bias, turn_bias, spatial_bias,
     end
 
     for i = 1:length(c1)
-        if ((i>1) && (data.session[i] != data.session[i-1]))
+        if ((i>1) && (data.daysessionnum[i] != data.daysessionnum[i-1]))
             if rewscaled
                 Q[:,:,i] .*= retain_belief
                 Q[:,:,i] .+= (1 .- retain_belief) .* (2.0 * initial_Q - 1.0)
@@ -208,8 +211,8 @@ end
 """
 Q Learning likelihood function for non-optimization usage, e.g. just computing the likelihood for a particular set of parameters
 """
-function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, retain_belief=0.0, initial_Q=0.0, decay=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, record)
+function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, depletion_factor=1.0, retain_belief=0.0, initial_Q=0.0, decay=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -236,19 +239,22 @@ function qlik(data, results::T; subject=0, params=nothing, delay_turn_bias=false
         end
     end
     if haskey(d, :α)
-        d[:α] = 0.5 + 0.5 * erf(d[:α] / sqrt(2))
+        d[:α] = unitnorm(d[:α])
     end
     if haskey(d, :γ2)
-        d[:γ2] = 0.5 + 0.5 * erf(d[:γ2] / sqrt(2))
+        d[:γ2] = unitnorm(d[:γ2])
+    end
+    if haskey(d, :depletion_factor)
+        d[:depletion_factor] = unitnorm(d[:depletion_factor])
     end
     if haskey(d, :retain_belief)
-        d[:retain_belief] = 0.5 + 0.5 * erf(d[:retain_belief] / sqrt(2))
+        d[:retain_belief] = unitnorm(d[:retain_belief])
     end
     if haskey(d, :initial_Q)
-        d[:initial_Q] = 0.5 + 0.5 * erf(d[:initial_Q] / sqrt(2))
+        d[:initial_Q] = unitnorm(d[:initial_Q])
     end
     if haskey(d, :decay)
-        d[:decay] = 0.5 + 0.5 * erf(d[:decay] / sqrt(2))
+        d[:decay] = unitnorm(d[:decay])
     end
     # Combine array parameters
     if haskey(d, :spatial_1)
@@ -278,6 +284,8 @@ full: Whether to model full covariance matrix
 extended: Try to calculate p-values and group-level covariance
 quiet: Silence progress
 
+βgo: Scaling for alternate stems
+βstay: Scaling for current stem
 βleaf: Beta weight for leaf choice softmax
 stay_bias: Offset added to staying at current stem
 turn_bias: Offset added to (leftward?) choice
@@ -293,6 +301,8 @@ rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
 """
 function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=false,
+    add_βgo=true,
+    add_βstay=true,
     add_βleaf=false,
     add_stay_bias=false,
     add_turn_bias=false,
@@ -300,24 +310,36 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_leaf_turn_bias=false,
     add_leaf_spatial_bias=false,
     add_γ2=false,
+    add_depletion_factor=false,
     add_retain_belief=false,
     add_initial_Q=false,
     add_decay=false,
     delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
+    subjlevel=:daynum,
     )
 
     data = copy(df)
-    data[:, :sub] = data[:, :daynum]
+    data[:, :sub] = data[:, subjlevel]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
 
-    initbetas = [0 0]
-    initsigma = [5, 5]
-    varnames = ["βgo", "βstay"]
+    initbetas = Matrix{Float64}(undef, 1, 0)
+    initsigma = Vector{Float64}(undef, 0)
+    varnames = Vector{String}(undef, 0)
 
+    if add_βgo
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βgo")
+    end
+    if add_βstay
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 5)
+        push!(varnames, "βstay")
+    end
     if add_βleaf
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 5)
@@ -353,6 +375,11 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         push!(initsigma, 1)
         push!(varnames, "γ2")
     end
+    if add_depletion_factor
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "depletion_factor")
+    end
     if add_retain_belief
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 1)
@@ -374,9 +401,21 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     push!(varnames, "α")
 
     function fn(params, data)
-        βgo = params[1]
-        βstay = params[2]
-        i = 3
+        i = 1
+
+        if add_βgo
+            βgo = params[i] # beta for go choice
+            i += 1
+        else
+            βgo = 0.0
+        end
+
+        if add_βstay
+            βstay = params[i] # beta for stay choice
+            i += 1
+        else
+            βstay = 0.0
+        end
 
         if add_βleaf
             βleaf = params[i] # beta for leaf choice on switch
@@ -421,37 +460,44 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         end
 
         if add_γ2
-            γ2 = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            γ2 = unitnorm(params[i])
             i += 1
         else
             γ2 = 0.0
         end
 
+        if add_depletion_factor
+            depletion_factor = unitnorm(params[i])
+            i += 1
+        else
+            depletion_factor = 1.0
+        end
+
         if add_retain_belief
-            retain_belief = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            retain_belief = unitnorm(params[i])
             i += 1
         else
             retain_belief = 0.0
         end
 
         if add_initial_Q
-            initial_Q = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            initial_Q = unitnorm(params[i])
             i += 1
         else
             initial_Q = 0.0
         end
 
         if add_decay
-            decay = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+            decay = unitnorm(params[i])
             i += 1
         else
             decay = 0.0
         end
 
-        α = 0.5 + 0.5 * erf(params[i] / sqrt(2))
+        α = unitnorm(params[i])
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
@@ -473,12 +519,14 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     end
 end
 
-function find_Q_vals_by_day_qlearner(data, results; add_leaf=true, rewscaled, delay_turn_bias)
-    ndays = maximum(data.daynum)
-    liks = zeros(ndays)
+function find_Q_vals_qlearner(df, results; add_leaf=true, rewscaled, delay_turn_bias, subjlevel=:daynum)
+    data = copy(df)
+    data[:, :sub] = data[:, subjlevel]
+    nsubjs = maximum(data.sub)
+    liks = zeros(nsubjs)
     dfs = []
-    for i in 1:ndays
-        (liks[i], df) = qlik(view(data, data.daynum .== i, :), results;
+    for i in 1:nsubjs
+        (liks[i], df) = qlik(view(data, data.sub .== i, :), results;
         subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
         push!(dfs, df)
     end
