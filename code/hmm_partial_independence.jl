@@ -256,6 +256,13 @@ hmm_partial_independence_lik
 
 HMM Likelihood function
 
+This attempts to parameterize the transition matrix for a single HMM,
+such that extremes of the transition function reduce to a fully joint
+or fully independent HMM.
+
+Deprecated in favor of v2, which parameterizes a balance between two fully
+separate joint and independent HMMs.
+
 ϕcore: nstates x 6 emission probabilities
 volatility<float>: Assumed chance of a switch
 ρ<float>: Weighting of switching to core states vs. all states

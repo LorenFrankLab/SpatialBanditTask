@@ -165,6 +165,9 @@ hmm_partial_independence2_lik
 
 HMM Likelihood function
 
+Parameterizes a balance between two fully
+separate joint and independent HMMs.
+
 ϕ: nstates x 6 emission probabilities
 volatility<float>: Assumed chance of a switch
 ρ<float>: Weighting of joint vs. independent estimation
