@@ -36,12 +36,12 @@ fns = [
 # ("hmm_leaf_spatial_leafspatial_γ2", run_hmm_leaf_spatial_leafspatial_γ2, true),
 # ("hmm_leaf_spatial_leafturn_γ2", run_hmm_leaf_spatial_leafturn_γ2, true),
 
-# ("hmm_leaf_stay_turn_γ2", run_hmm_leaf_stay_turn_γ2, true),
+("hmm_leaf_stay_turn_γ2", run_hmm_leaf_stay_turn_γ2, true),
 # ("hmm_leaf_stay_spatial_γ2", run_hmm_leaf_stay_spatial_γ2, true),
 # ("hmm_leaf_stay_leafturn_γ2", run_hmm_leaf_stay_leafturn_γ2, true),
 # ("hmm_leaf_stay_leafspatial_γ2", run_hmm_leaf_stay_leafspatial_γ2, true),
-# ("hmm_leaf_stay_turn_leafspatial_γ2", run_hmm_leaf_stay_turn_leafspatial_γ2, true),
-# ("hmm_leaf_stay_turn_leafturn_γ2", run_hmm_leaf_stay_turn_leafturn_γ2, true),
+("hmm_leaf_stay_turn_leafspatial_γ2", run_hmm_leaf_stay_turn_leafspatial_γ2, true),
+("hmm_leaf_stay_turn_leafturn_γ2", run_hmm_leaf_stay_turn_leafturn_γ2, true),
 # ("hmm_leaf_stay_spatial_leafspatial_γ2", run_hmm_leaf_stay_spatial_leafspatial_γ2, true),
 # ("hmm_leaf_stay_spatial_leafturn_γ2", run_hmm_leaf_stay_spatial_leafturn_γ2, true),
 
@@ -57,7 +57,7 @@ fns = [
 ("hmm_stay", run_hmm_stay, false),
 ("hmm_stay_turn", run_hmm_stay_turn, false),
 ("hmm_stay_spatial", run_hmm_stay_spatial, false),
-# ("hmm_stay_turn_γ2", run_hmm_stay_turn_γ2, false),
+("hmm_stay_turn_γ2", run_hmm_stay_turn_γ2, false),
 # ("hmm_stay_spatial_γ2", run_hmm_stay_spatial_γ2, false),
 ]
 base_dir = "../results/hmm_noreward_biases"
