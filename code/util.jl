@@ -171,6 +171,9 @@ function load_animal_combined(animal, filepath)
     return combined
 end
 
+# This loads all animals together,
+# with data shifted to have unique daynum and daysessionnum numbers
+# across both non-depletion and depletion sessions
 function load_allanimals_combined(filepath)
     combined = []
     for animal in animals
