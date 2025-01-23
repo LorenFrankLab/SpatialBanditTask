@@ -638,7 +638,7 @@ function hmm_lik(data, ϕ, results::T; subject=0, params=nothing, delay_turn_bia
             d[k] = v
         end
     end
-    hmm_lik(data, ϕ; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
+    hmm_lik(data, ϕ; delay_turn_bias, rewscaled, add_leaf, record, d...)
 end
 
 """
@@ -890,7 +890,7 @@ rewscaled: If true, reward is +1/-1 instead of 0/1
 delay_turn_bias: Whether to delay the addition of the turn bias
 subjlevel: How to split the dataset - either :daynum or :daysessionnum
 """
-function find_Q_vals_hmm(df, results; add_leaf=true, rewscaled, delay_turn_bias, subjlevel=:daynum)
+function find_Q_vals_hmm(df, results; add_leaf=true, rewscaled, delay_turn_bias, params=nothing, subjlevel=:daynum)
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
     nsubjs = maximum(data.sub)
@@ -898,7 +898,7 @@ function find_Q_vals_hmm(df, results; add_leaf=true, rewscaled, delay_turn_bias,
     dfs = []
     for i in 1:nsubjs
         (liks[i], df) = hmm_lik(view(data, data.sub .== i, :), get_contingencies(), results;
-        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+        subject=i, add_leaf, rewscaled, delay_turn_bias, params, record=true)
         push!(dfs, df)
     end
     record_df = vcat(dfs...) # Combine all session results
