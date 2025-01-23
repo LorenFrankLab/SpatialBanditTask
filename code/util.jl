@@ -91,13 +91,13 @@ function load_animal(animal, filepath; depletion=false)
     prevsession = 0
     for i in axes(df, 1)
         session = df[i, :daysessionnum]
+        stem = df[i, :stem]
         if (session == prevsession)
-            stem = df[i, :stem]
             if (stem != prevstem)
                 df[i, :stemswitch] = true
             end
-            prevstem = stem
         end
+        prevstem = stem
         prevsession = session
     end
 
