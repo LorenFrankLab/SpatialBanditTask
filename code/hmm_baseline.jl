@@ -314,7 +314,7 @@ function hmm_baseline_lik(data, results::T; subject=0, params=nothing, delay_tur
             d[k] = v
         end
     end
-    hmm_baseline_lik(data; delay_turn_bias=delay_turn_bias, rewscaled=rewscaled, add_leaf=add_leaf, record=record, d...)
+    hmm_baseline_lik(data; delay_turn_bias, rewscaled, add_leaf, record, d...)
 end
 
 """
@@ -354,7 +354,7 @@ function run_hmm_baseline(df; maxiter=100, emtol=1e-3, full=true, extended=false
     )
 
     data = copy(df)
-    data[:, :sub] = data[:, :daynum]
+    data[:, :sub] = data[:, subjlevel]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
     NS = length(subs) #number of subjects/days
     X = ones(NS) # (group level design matrix); #x group level design matrix...
@@ -516,13 +516,15 @@ function run_hmm_baseline(df; maxiter=100, emtol=1e-3, full=true, extended=false
     end
 end
 
-function find_Q_vals_by_day_hmm_baseline(data, results; add_leaf=true, rewscaled, delay_turn_bias)
-    ndays = maximum(data.daynum)
-    liks = zeros(ndays)
+function find_Q_vals_by_day_hmm_baseline(data, results; add_leaf=true, rewscaled, delay_turn_bias, params=nothing, subjlevel=:daynum)
+    data = copy(df)
+    data[:, :sub] = data[:, subjlevel]
+    nsubjs = maximum(data.sub)
+    liks = zeros(nsubjs)
     dfs = []
-    for i in 1:ndays
-        (liks[i], df) = hmm_baseline_lik(view(data, data.daynum .== i, :), results;
-        subject=i, add_leaf=add_leaf, rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, record=true)
+    for i in 1:nsubjs
+        (liks[i], df) = hmm_baseline_lik(view(data, data.sub .== i, :), results;
+        subject=i, add_leaf, rewscaled, delay_turn_bias, params, record=true)
         push!(dfs, df)
     end
     record_df = vcat(dfs...) # Combine all session results
