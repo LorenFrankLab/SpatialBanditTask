@@ -351,6 +351,7 @@ function run_hmm_baseline(df; maxiter=100, emtol=1e-3, full=true, extended=false
     add_leaf=true,
     loocv_data=nothing,
     loocv_subject=nothing,
+    subjlevel=:daynum,
     )
 
     data = copy(df)
