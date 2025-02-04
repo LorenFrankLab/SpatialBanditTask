@@ -696,6 +696,24 @@ function run_hmm_independentsamedist(df; maxiter=100, emtol=1e-3, full=true, ext
     subjlevel=:daynum,
     )
 
+    @info add_volatility
+    @info add_βgo
+    @info add_βstay
+    @info add_βleaf
+    @info add_stay_bias
+    @info add_turn_bias
+    @info add_spatial_bias
+    @info add_leaf_turn_bias
+    @info add_leaf_spatial_bias
+    @info add_γ2
+    @info add_depletion_factor
+    @info add_retain_belief
+    @info delay_turn_bias
+    @info rewscaled
+    @info add_leaf
+    @info loocv_subject
+    @info subjlevel
+
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
@@ -766,6 +784,8 @@ function run_hmm_independentsamedist(df; maxiter=100, emtol=1e-3, full=true, ext
         push!(initsigma, 1)
         push!(varnames, "retain_belief")
     end
+
+    @info varnames
 
     function fn(params, data)
         i = 1
@@ -921,12 +941,12 @@ run_hmm_independentsamedist_leaf_stay_turn_leafturn(data; kwargs...) = run_hmm_i
 run_hmm_independentsamedist_leaf_stay_spatial_leafspatial(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, kwargs...)
 run_hmm_independentsamedist_leaf_stay_spatial_leafturn(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, kwargs...)
 
-run_hmm_independentsamedist_leaf_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, kwargs...)
-run_hmm_independentsamedist_leaf_turn_leafspatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_spatial_bias=true, kwargs...)
-run_hmm_independentsamedist_leaf_turn_leafturn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_turn_bias=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_leafspatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_spatial_bias=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_leafturn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_turn_bias=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_leafspatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_leafturn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_leafspatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_leafturn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, kwargs...)
 
 run_hmm_independentsamedist_leaf_stay_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
 run_hmm_independentsamedist_leaf_stay_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
@@ -958,12 +978,12 @@ run_hmm_independentsamedist_leaf_stay_turn_leafturn_depletion(data; kwargs...) =
 run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_leaf_stay_spatial_leafturn_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, kwargs...)
 
-run_hmm_independentsamedist_leaf_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_leafspatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_leaf_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_leafspatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_turn_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_turn_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_leafspatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_leaf_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 
 run_hmm_independentsamedist_leaf_stay_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_leaf_stay_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
@@ -975,22 +995,22 @@ run_hmm_independentsamedist_leaf_stay_spatial_leafspatial_γ2_depletion(data; kw
 run_hmm_independentsamedist_leaf_stay_spatial_leafturn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_βleaf=true, add_stay_bias=true, add_spatial_bias=true, add_leaf_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 
 # Depletion without leaf, might make depletion / non-depletion comparison better?
-run_hmm_independentsamedist_base(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=false, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_retainbelief(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_turn(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_spatial(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=false, kwargs...)
+run_hmm_independentsamedist_base(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, kwargs...)
+run_hmm_independentsamedist_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_retainbelief(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_retain_belief=true, kwargs...)
+run_hmm_independentsamedist_stay(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, kwargs...)
+run_hmm_independentsamedist_turn(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, kwargs...)
+run_hmm_independentsamedist_spatial(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, kwargs...)
 
-run_hmm_independentsamedist_stay_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay_retainbelief(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay_turn(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay_spatial(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=false, kwargs...)
+run_hmm_independentsamedist_stay_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_stay_retainbelief(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_retain_belief=true, kwargs...)
+run_hmm_independentsamedist_stay_turn(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, kwargs...)
+run_hmm_independentsamedist_stay_spatial(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, kwargs...)
 
-run_hmm_independentsamedist_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=false, kwargs...)
-run_hmm_independentsamedist_stay_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=false, kwargs...)
+run_hmm_independentsamedist_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_stay_turn_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, kwargs...)
+run_hmm_independentsamedist_stay_spatial_γ2(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, kwargs...)
 
 run_hmm_independentsamedist_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_γ2=true, add_depletion_factor=true, kwargs...)
@@ -1004,7 +1024,7 @@ run_hmm_independentsamedist_stay_retainbelief_depletion(data; kwargs...) = run_h
 run_hmm_independentsamedist_stay_turn_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_stay_spatial_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
 
-run_hmm_independentsamedist_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_depletion_factor=true, kwargs...)
-run_hmm_independentsamedist_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
+run_hmm_independentsamedist_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_stay_turn_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_turn_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
 run_hmm_independentsamedist_stay_spatial_γ2_depletion(data; kwargs...) = run_hmm_independentsamedist(data; add_leaf=false, add_βleaf=false, add_stay_bias=true, add_spatial_bias=true, add_γ2=true, add_depletion_factor=true, kwargs...)
