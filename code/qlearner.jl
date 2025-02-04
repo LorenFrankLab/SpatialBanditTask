@@ -320,6 +320,24 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     subjlevel=:daynum,
     )
 
+    @show add_βgo
+    @show add_βstay
+    @show add_βleaf
+    @show add_stay_bias
+    @show add_turn_bias
+    @show add_spatial_bias
+    @show add_leaf_turn_bias
+    @show add_leaf_spatial_bias
+    @show add_γ2
+    @show add_depletion_factor
+    @show add_retain_belief
+    @show add_initial_Q
+    @show add_decay
+    @show delay_turn_bias
+    @show rewscaled
+    @show add_leaf
+    @show subjlevel
+
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
     subs = unique(data[:,:sub]) #in this case subs is just differentiating days rather than rats/subjects
@@ -399,6 +417,8 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     initbetas = hcat(initbetas, 0)
     push!(initsigma, 1)
     push!(varnames, "α")
+
+    @show varnames
 
     function fn(params, data)
         i = 1

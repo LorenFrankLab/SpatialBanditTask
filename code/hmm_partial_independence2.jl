@@ -788,25 +788,25 @@ function run_hmm_partial_independence2(df; maxiter=100, emtol=1e-3, full=true, e
     subjlevel=:daynum,
     )
 
-    @info add_volatility
-    @info add_ρ
-    @info add_βgo
-    @info add_βstay
-    @info add_βleaf
-    @info add_stay_bias
-    @info add_turn_bias
-    @info add_spatial_bias
-    @info add_leaf_turn_bias
-    @info add_leaf_spatial_bias
-    @info add_γ2
-    @info add_factor
-    @info add_retain_belief
-    @info delay_turn_bias
-    @info rewscaled
-    @info add_leaf
-    @info ρ_default
-    @info loocv_subject
-    @info subjlevel
+    @show add_volatility
+    @show add_ρ
+    @show add_βgo
+    @show add_βstay
+    @show add_βleaf
+    @show add_stay_bias
+    @show add_turn_bias
+    @show add_spatial_bias
+    @show add_leaf_turn_bias
+    @show add_leaf_spatial_bias
+    @show add_γ2
+    @show add_factor
+    @show add_retain_belief
+    @show delay_turn_bias
+    @show rewscaled
+    @show add_leaf
+    @show ρ_default
+    @show loocv_subject
+    @show subjlevel
 
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
@@ -884,7 +884,7 @@ function run_hmm_partial_independence2(df; maxiter=100, emtol=1e-3, full=true, e
         push!(varnames, "retain_belief")
     end
 
-    @info varnames
+    @show varnames
 
     function fn(params, data)
         if ϕ === nothing
