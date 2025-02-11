@@ -87,9 +87,9 @@ end
 
 function hmm_independentsamedist_avgedturn_lik_turn_inner!(Qstem, prevs, turn_bias, spatial_bias)
     Qstem[mod1(prevs + 1, 3)] += turn_bias
-    Qstem[mod1(prevs + 1, 3)] -= turn_bias
+    Qstem[mod1(prevs + 2, 3)] -= turn_bias
     Qstem[mod1(prevs + 1, 3)] += spatial_bias[prevs]
-    Qstem[mod1(prevs + 1, 3)] -= spatial_bias[prevs]
+    Qstem[mod1(prevs + 2, 3)] -= spatial_bias[prevs]
 end
 
 function hmm_independentsamedist_avgedturn_lik_leaf_inner!(Qleaf, Q, stemchoice, βleaf, leaf_turn_bias, leaf_spatial_bias)
@@ -98,8 +98,10 @@ function hmm_independentsamedist_avgedturn_lik_leaf_inner!(Qleaf, Q, stemchoice,
     Qleaf .= Qleaf .* βleaf
     # Add turn bias
     Qleaf[1] += leaf_turn_bias
+    Qleaf[2] -= leaf_turn_bias
     # Add per-stem turn biases
     Qleaf[1] += leaf_spatial_bias[stemchoice]
+    Qleaf[2] -= leaf_spatial_bias[stemchoice]
 end
 
 leafpairs = Dict(
