@@ -295,7 +295,7 @@ leaf_spatial_bias: Per-stem leaf turn bias
 γ2: Fraction of current stem's value derived from leaf we're leaving (vs. leaf we're going to)
 depletion_factor: Fraction of value retained when remaining at the same leaf for multiple trials
 retain_belief: Fraction of Q-value estimates to retain between sessions
-initial_Q: Allow Q-values to initialize to a value above minimum
+initial_Q: Allow Q-values to initialize to a value above minimum (a fixed value can also be provided for this)
 decay: Decay rate for Q-values (to initial_Q)
 rewscaled: If true, reward is +1/-1 instead of 0/1
 add_leaf: Whether to include likelihood for the leaf choice on a stem switch
@@ -314,6 +314,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_retain_belief=false,
     add_initial_Q=false,
     add_decay=false,
+    initial_Q=nothing,
     delay_turn_bias=false,
     rewscaled=false,
     add_leaf=true,
@@ -333,6 +334,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     @show add_retain_belief
     @show add_initial_Q
     @show add_decay
+    @show initial_Q
     @show delay_turn_bias
     @show rewscaled
     @show add_leaf
@@ -501,10 +503,12 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         end
 
         if add_initial_Q
-            initial_Q = unitnorm(params[i])
+            f_initial_Q = unitnorm(params[i])
             i += 1
+        elseif !isnothing(initial_Q)
+            f_initial_Q = initial_Q
         else
-            initial_Q = 0.0
+            f_initial_Q = 0.0
         end
 
         if add_decay
@@ -517,7 +521,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         α = unitnorm(params[i])
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, f_initial_Q, decay, α, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
