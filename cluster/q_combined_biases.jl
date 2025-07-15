@@ -322,7 +322,7 @@ fns = [
 ("q_initialQ_stay_turn_γ2_decay_depletion", run_q_initialQ_stay_turn_γ2_decay_depletion, false, true),
 ("q_initialQ_stay_spatial_γ2_decay_depletion", run_q_initialQ_stay_spatial_γ2_decay_depletion, false, true),
 ]
-base_dir = "../results/q_biases"
+base_dir = "../results/q_combined_biases"
 i = parse(Int, ARGS[1])
 (fn_ind, animal_ind) = fldmod1(i, length(animals))
 animal = animals[animal_ind]
