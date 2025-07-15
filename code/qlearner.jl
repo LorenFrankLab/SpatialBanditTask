@@ -162,11 +162,14 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
         if (depletion_factor < 1.0)
             # May be a way to handle this more efficiently
             if rewscaled
-                d = sqrt(2/depletion[c2[i]]-1)
+                d = 2/depletion[c2[i]]-1  # Total adjustment factor
+                r1 = sqrt(d)
+                r2 = r1/d
+                α1 = α * r2
                 if r[i] > 0
-                    Q[c1[i],c2[i],i+1] = (1 - α) * Q[c1[i],c2[i],i] + α * r[i] * d
+                    Q[c1[i],c2[i],i+1] = (1 - α1) * Q[c1[i],c2[i],i] + α * r[i] * r1
                 else
-                    Q[c1[i],c2[i],i+1] = (1 - α) * Q[c1[i],c2[i],i] + α * r[i] / d
+                    Q[c1[i],c2[i],i+1] = (1 - α1) * Q[c1[i],c2[i],i] + α * r[i] * r2
                 end
             else
                 d = sqrt(depletion[c2[i]])
