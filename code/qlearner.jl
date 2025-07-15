@@ -62,11 +62,12 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
     stem_3_p = zeros(U, length(c1))
     leaf_1_p = zeros(U, length(c1))
     leaf_2_p = zeros(U, length(c1))
-    depletion = ones(U, 6)
 
     Q = zeros(U,3,2,length(c1)+1)
     Qstem = zeros(U,3,length(c1))
     Qleaf = zeros(U,2,length(c1))
+    depletion = ones(U,3,2)
+    Q_depletion = zeros(U,3,2)
     if rewscaled
         Q .= (2.0 .* initial_Q) .- 1.0
         Qstem .= (2.0 .* initial_Q) .- 1.0
@@ -88,21 +89,25 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
             end
             prevs = 0
             prevl = 0
+            depletion .= 1.0
         end
+
+        # Adjust for depletion
+        @views Q_depletion .= Q[:, :, i] .* depletion
 
         # this is the (scaled) value of switching to each alternative stem
         # mean averages over both leaves
         # 
         # Seems to be faster breaking it up into the three calculations
-        @views Qstem[1, i] = mean(Q[1, :, i]) * βgo
-        @views Qstem[2, i] = mean(Q[2, :, i]) * βgo
-        @views Qstem[3, i] = mean(Q[3, :, i]) * βgo
+        @views Qstem[1, i] = mean(Q_depletion[1, :]) * βgo
+        @views Qstem[2, i] = mean(Q_depletion[2, :]) * βgo
+        @views Qstem[3, i] = mean(Q_depletion[3, :]) * βgo
 
         if prevs > 0
             # this is the (scaled) value of staying with the current stem
             # uses only the value of the next leaf
             # plus the bias toward staying
-            Qstem[prevs, i] = βstay * ((1.0 - γ2) * Q[prevs,3-prevl,i] + γ2 * Q[prevs,prevl,i]) + stay_bias
+            Qstem[prevs, i] = βstay * ((1.0 - γ2) * Q_depletion[prevs,3-prevl] + γ2 * Q_depletion[prevs,prevl]) + stay_bias
             # spatial bias
             # 1 -> 2, 2->3, 3->1
             # Probability of stay/switch
@@ -144,7 +149,7 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
 
         ## Leaf
         if ((prevs != c1[i]) && add_leaf)
-            @views Qleaf[:, i] .= Q[c1[i], :, i]
+            @views Qleaf[:, i] .= Q_depletion[c1[i], :]
             @views Qleaf[:, i] .*= βleaf
             # Add leaf bias
             Qleaf[1, i] += leaf_turn_bias + leaf_spatial_bias[c1[i]]
