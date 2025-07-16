@@ -372,15 +372,15 @@ end
 
 # Function name, function, add leaf, fit initial Q, initial Q value, rewscaled, delay turn bias, flag_loocv, full
 if fn_depletion
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 0.0, flag_loocv, false)
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 0.0, flag_loocv, false)
-    # run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 0.0, flag_loocv, false)
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 0.5, flag_loocv, false)
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 0.5, flag_loocv, false)
-    # run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 0.5, flag_loocv, false)
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 1.0, flag_loocv, false)
-    run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 1.0, flag_loocv, false)
-    # run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 1.0, flag_loocv, false)
+    for depletion_tuning in 0:0.1:1.0
+        try
+            run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, depletion_tuning, flag_loocv, false)
+            run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, depletion_tuning, flag_loocv, false)
+            # run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, depletion_tuning, flag_loocv, false)
+        catch
+            @warn "Error running $(fn_name) with depletion tuning $(depletion_tuning)"
+        end
+    end
 else
     run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, nothing, flag_loocv, false)
     run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, nothing, flag_loocv, false)
