@@ -178,7 +178,7 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
                 end
             else
                 d = depletion[c2[i]]^(-depletion_tuning)
-                Q[c1[i],c2[i],i+1] = (1 - α*d) * Q[c1[i],c2[i],i] + α * r[i] / d
+                Q[c1[i],c2[i],i+1] = (1 - α/d) * Q[c1[i],c2[i],i] + α * r[i] * d
             end
 
             if (prevs == c1[i])
