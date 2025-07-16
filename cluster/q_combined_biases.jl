@@ -334,9 +334,10 @@ flag_loocv = parse(Bool, ARGS[2])
 @info fn_name
 @info flag_loocv
 
-function run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, initial_Q, rewscaled, delay_turn_bias, flag_loocv, full)
+function run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, initial_Q, rewscaled, delay_turn_bias, depletion_tuning, flag_loocv, full)
     # Create the base filename
     fname = fn_name
+    fname = !isnothing(depletion_tuning) ? fname * "_tuning-$(depletion_tuning)" : fname
     fname = fn_fit_initial_Q ? fname : fname * "_initialQ-$(initial_Q)"
     fname = rewscaled ? fname * "_rewscaled" : fname
     fname = delay_turn_bias ? fname * "_delayturnbias" : fname
@@ -350,21 +351,30 @@ function run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, initial_Q, rewscaled
         fn_initial_Q = initial_Q
         params[:initial_Q] = initial_Q
     end
+    if !isnothing(depletion_tuning)
+        params[:depletion_tuning] = depletion_tuning
+    end
     if flag_loocv
         fname_loocv = fname * "_loocv"
     
         results = load("$(base_dir)/$(fname).jld2", "results")
-        results_loocv = fn(data; extended=true, initial_Q=fn_initial_Q, rewscaled, delay_turn_bias, loocv_data=results, full)
+        results_loocv = fn(data; extended=true, initial_Q=fn_initial_Q, rewscaled, delay_turn_bias, depletion_tuning, loocv_data=results, full)
         save("$(base_dir)_loocv/$(fname_loocv).jld2", "results_loocv", results_loocv; compress=true)
     else
-        results = fn(data; extended=true, initial_Q=fn_initial_Q, rewscaled, delay_turn_bias, full)
+        results = fn(data; extended=true, initial_Q=fn_initial_Q, rewscaled, delay_turn_bias, depletion_tuning, full)
         save("$(base_dir)/$(fname).jld2", "results", results; compress=true)
-        write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias)
+        write_EM_to_mat(results, "$(base_dir)/$(fname).mat"; rewscaled=rewscaled, delay_turn_bias=delay_turn_bias, depletion_tuning)
         Q = find_Q_vals_by_day(data, results; params, rewscaled, delay_turn_bias, add_leaf=fn_add_leaf);
         CSV.write("$(base_dir)/Q_vals_$(fname).csv.gz", Q; compress=true)
     end
 end
 
-run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, flag_loocv, false)
-run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, flag_loocv, false)
-# run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 0.0, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 0.0, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 0.0, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 0.5, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 0.5, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 0.5, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, false, false, 1.0, flag_loocv, false)
+run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, false, 1.0, flag_loocv, false)
+# run_fn(fn_name, fn, fn_add_leaf, fn_fit_initial_Q, 0.5, true, true, 1.0, flag_loocv, false)

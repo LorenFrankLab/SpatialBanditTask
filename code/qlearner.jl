@@ -32,7 +32,7 @@ Returns:
 If 'record':
     Q: Inferred leaf Q-values at the start of each trial, ignoring biases
 """
-function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, decay_Q, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
+function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, depletion_tuning, retain_belief, initial_Q, decay, decay_Q, α, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
     U = promote_type(eltype(βstay), eltype(stay_bias))  # this is a bit of a hack so that we can optionally have either of these fixed at 0
     # mode = "likelihood"
 
@@ -168,7 +168,7 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
             # May be a way to handle this more efficiently
             if rewscaled
                 d = 2/depletion[c2[i]]-1  # Total adjustment factor
-                r1 = sqrt(d)
+                r1 = d^(-depletion_tuning)
                 r2 = r1/d
                 α1 = α * r2
                 if r[i] > 0
@@ -177,7 +177,7 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
                     Q[c1[i],c2[i],i+1] = (1 - α1) * Q[c1[i],c2[i],i] + α * r[i] * r2
                 end
             else
-                d = sqrt(depletion[c2[i]])
+                d = depletion[c2[i]]^(-depletion_tuning)
                 Q[c1[i],c2[i],i+1] = (1 - α*d) * Q[c1[i],c2[i],i] + α * r[i] / d
             end
 
@@ -243,8 +243,8 @@ end
 """
 Q Learning likelihood function for non-optimization usage, e.g. just computing the likelihood for a particular set of parameters
 """
-function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, depletion_factor=1.0, retain_belief=0.0, initial_Q=0.75, decay=0.0, decay_Q=0.75, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
-    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, initial_Q, decay, decay_Q, α, delay_turn_bias, rewscaled, add_leaf, record)
+function qlik(data; βgo=0.0, βstay=0.0, α=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], γ2=0.0, depletion_factor=1.0, depletion_tuning=1.0, retain_belief=0.0, initial_Q=0.75, decay=0.0, decay_Q=0.75, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, depletion_tuning, retain_belief, initial_Q, decay, decay_Q, α, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -278,6 +278,9 @@ function qlik(data, results::T; subject=0, params=nothing, delay_turn_bias=false
     end
     if haskey(d, :depletion_factor)
         d[:depletion_factor] = unitnorm(d[:depletion_factor])
+    end
+    if haskey(d, :depletion_tuning)
+        d[:depletion_tuning] = unitnorm(d[:depletion_tuning])
     end
     if haskey(d, :retain_belief)
         d[:retain_belief] = unitnorm(d[:retain_belief])
@@ -346,12 +349,14 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     add_leaf_spatial_bias=false,
     add_γ2=false,
     add_depletion_factor=false,
+    add_depletion_tuning=false,
     add_retain_belief=false,
     add_initial_Q=false,
     add_decay=false,
     add_decay_Q=false,
     initial_Q=nothing,
     delay_turn_bias=false,
+    depletion_tuning=1.0,
     rewscaled=false,
     add_leaf=true,
     subjlevel=:daynum,
@@ -373,6 +378,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
     @show add_decay_Q
     @show initial_Q
     @show delay_turn_bias
+    @show depletion_tuning
     @show rewscaled
     @show add_leaf
     @show subjlevel
@@ -436,6 +442,11 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 1)
         push!(varnames, "depletion_factor")
+    end
+    if add_depletion_tuning
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "depletion_tuning")
     end
     if add_retain_belief
         initbetas = hcat(initbetas, 0)
@@ -537,6 +548,13 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
             depletion_factor = 1.0
         end
 
+        if add_depletion_tuning
+            f_depletion_tuning = unitnorm(params[i])
+            i += 1
+        else
+            f_depletion_tuning = depletion_tuning
+        end
+
         if add_retain_belief
             retain_belief = unitnorm(params[i])
             i += 1
@@ -570,7 +588,7 @@ function run_q(df; maxiter=100, emtol=1e-3, full=true, extended=false, quiet=fal
         α = unitnorm(params[i])
         i += 1
 
-        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, retain_belief, f_initial_Q, decay, decay_Q, α, delay_turn_bias, rewscaled, add_leaf, false)
+        return qlik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, γ2, depletion_factor, f_depletion_tuning, retain_belief, f_initial_Q, decay, decay_Q, α, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     (betas,sigma,x,l,h,opt_rec) = em(data,subs,X,initbetas,initsigma,fn; emtol=emtol, full=full, maxiter=maxiter, quiet=quiet);
