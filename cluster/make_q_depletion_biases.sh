@@ -2,7 +2,7 @@
 set -euo pipefail
 
 N_CONDS=60
-N_CORES=8
+N_CORES=4
 MAX_TIME=300
 STUDY_NAME="q_depletion_biases"
 VER_NAME=$STUDY_NAME

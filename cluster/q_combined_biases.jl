@@ -168,9 +168,9 @@ fns = [
 # ("q_initialQ_stay_retainbelief_decay", run_q_initialQ_stay_retainbelief_decay, false, true, false),
 
 ("q_initialQ_stay_turn_decay", run_q_initialQ_stay_turn_decay, false, true, false),
-("q_initialQ_stay_spatial_decay", run_q_initialQ_stay_spatial_decay, false, true, false),
+# ("q_initialQ_stay_spatial_decay", run_q_initialQ_stay_spatial_decay, false, true, false),
 ("q_initialQ_stay_turn_γ2_decay", run_q_initialQ_stay_turn_γ2_decay, false, true, false),
-("q_initialQ_stay_spatial_γ2_decay", run_q_initialQ_stay_spatial_γ2_decay, false, true, false),
+# ("q_initialQ_stay_spatial_γ2_decay", run_q_initialQ_stay_spatial_γ2_decay, false, true, false),
 
 # DEPLETION
 
@@ -319,9 +319,9 @@ fns = [
 # ("q_initialQ_stay_retainbelief_decay_depletion", run_q_initialQ_stay_retainbelief_decay_depletion, false, true, true),
 
 ("q_initialQ_stay_turn_decay_depletion", run_q_initialQ_stay_turn_decay_depletion, false, true, true),
-("q_initialQ_stay_spatial_decay_depletion", run_q_initialQ_stay_spatial_decay_depletion, false, true, true),
+# ("q_initialQ_stay_spatial_decay_depletion", run_q_initialQ_stay_spatial_decay_depletion, false, true, true),
 ("q_initialQ_stay_turn_γ2_decay_depletion", run_q_initialQ_stay_turn_γ2_decay_depletion, false, true, true),
-("q_initialQ_stay_spatial_γ2_decay_depletion", run_q_initialQ_stay_spatial_γ2_decay_depletion, false, true, true),
+# ("q_initialQ_stay_spatial_γ2_decay_depletion", run_q_initialQ_stay_spatial_γ2_decay_depletion, false, true, true),
 ]
 base_dir = "../results/q_combined_biases"
 i = parse(Int, ARGS[1])
