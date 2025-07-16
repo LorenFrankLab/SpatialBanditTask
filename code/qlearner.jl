@@ -168,8 +168,8 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
             # May be a way to handle this more efficiently
             if rewscaled
                 d = 2/depletion[c2[i]]-1  # Total adjustment factor
-                r1 = d^(-depletion_tuning)
-                r2 = r1/d
+                r1 = d^(1-depletion_tuning)
+                r2 = d^(-depletion_tuning)
                 α1 = α * r2
                 if r[i] > 0
                     Q[c1[i],c2[i],i+1] = (1 - α1) * Q[c1[i],c2[i],i] + α * r[i] * r1
@@ -177,8 +177,9 @@ function qlik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bi
                     Q[c1[i],c2[i],i+1] = (1 - α1) * Q[c1[i],c2[i],i] + α * r[i] * r2
                 end
             else
-                d = depletion[c2[i]]^(-depletion_tuning)
-                Q[c1[i],c2[i],i+1] = (1 - α/d) * Q[c1[i],c2[i],i] + α * r[i] * d
+                d1 = depletion[c2[i]]^(-depletion_tuning)
+                d2 = depletion[c2[i]]^(1-depletion_tuning)
+                Q[c1[i],c2[i],i+1] = (1 - α*d2) * Q[c1[i],c2[i],i] + α * r[i] * d1
             end
 
             if (prevs == c1[i])
