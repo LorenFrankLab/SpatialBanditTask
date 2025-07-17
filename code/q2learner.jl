@@ -191,7 +191,7 @@ function q2lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_b
             end
 
             if (prevs == c1[i])
-                depletion[c2[i]] *= depletion_factor
+                depletion[c1[i], c2[i]] *= depletion_factor
             else
                 depletion .= 1
             end
