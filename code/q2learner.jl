@@ -169,7 +169,7 @@ function q2lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_b
             if rewscaled
                 # At 0.0, r1 should be 1.0, r2 should be small
                 # At 1.0, r1 should be large. r2 should be 1.0
-                d = depletion[c2[i]]
+                d = depletion[c1[i], c2[i]]
                 Qi = Q[c1[i],c2[i],i]
                 Qi_adj = (Qi + 1) / 2 # rescale to 0.0-1.0
                 r2 = 2*Qi_adj*(1-d)/(1-d*Qi_adj) - 1 # back to -1/1
@@ -181,7 +181,7 @@ function q2lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_b
             else
                 # At 0.0, d1 should be 1.0, d2 should be small
                 # At 1.0, d1 should be large, d2 should be 1.0
-                d = depletion[c2[i]]
+                d = depletion[c1[i], c2[i]]
                 Qi = Q[c1[i],c2[i],i]
                 if r[i] > 0
                     Q[c1[i],c2[i],i+1] = (1 - α) * Qi + α
