@@ -2,6 +2,7 @@ using Statistics
 using StatsFuns
 using SpecialFunctions
 using DataFrames
+using LinearAlgebra
 using EM
 
 """ Run EM optimization with option for extended results
@@ -98,10 +99,14 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
     # Q is the 'true' expected value, not including depletion
     # Qdep (from Q) includes depletion for that trial
     # Qstem (from Qdep) takes a (weighted) average of each stem, and adds stay/turn biases
+    # Qstem_nobias (from Qdep) takes a (weighted) average of each stem, without any biases
+    # Qstem_pre_update_post_bias is the value with biases from the final choice, but before a value update
     # Qleaf (from Qdep) incorporates a turn bias
     Q = zeros(U,3,2,length(c1)+1)
     Qdep = zeros(U,3,2,length(c1))
     Qstem = zeros(U,3,length(c1))
+    Qstem_nobias = zeros(U,3,length(c1))
+    Qstem_pre_update_post_bias = zeros(U,3,length(c1))
     Qleaf = zeros(U,2,length(c1))
     Q[:, :, 1] .= betadist_α[:, :, 1] ./ (betadist_α[:, :, 1] + betadist_β[:, :, 1])
     if rewscaled
@@ -129,15 +134,22 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
         # 
         # Seems to be faster breaking it up into the three calculations
         @views Qdep[:, :, i] .= Q[:, :, i] .* depletion
-        @views Qstem[1, i] = mean(Qdep[1, :, i]) * βgo
-        @views Qstem[2, i] = mean(Qdep[2, :, i]) * βgo
-        @views Qstem[3, i] = mean(Qdep[3, :, i]) * βgo
+        @views Qstem_nobias[1, i] = mean(Qdep[1, :, i]) * βgo
+        @views Qstem_nobias[2, i] = mean(Qdep[2, :, i]) * βgo
+        @views Qstem_nobias[3, i] = mean(Qdep[3, :, i]) * βgo
+        @views Qstem[:, i] = Qstem_nobias[:, i]
+        @views Qstem_pre_update_post_bias[:, i] = Qstem_nobias[:, i]
 
         if prevs > 0
             # this is the (scaled) value of staying with the current stem
             # uses only the value of the next leaf
             # plus the bias toward staying
-            Qstem[prevs, i] = βstay * ((1.0 - γ2) * Qdep[prevs,3-prevl,i] + γ2 * Qdep[prevs,prevl,i]) + stay_bias
+            Qstem_nobias[prevs, i] = βstay * ((1.0 - γ2) * Qdep[prevs,3-prevl,i] + γ2 * Qdep[prevs,prevl,i])
+            Qstem_pre_update_post_bias[prevs, i] = Qstem_nobias[prevs, i]
+            Qstem[prevs, i] = Qstem_nobias[prevs, i] + stay_bias
+            if i > 1
+                Qstem_pre_update_post_bias[prevs, i] += stay_bias
+            end
             # @views Qstem[:, i] .*= βgo
             # spatial bias
             # 1 -> 2, 2->3, 3->1
@@ -152,6 +164,9 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
                 Qstem[mod1(prevs + 1, 3), i] += spatial_bias[prevs] + turn_bias
                 @views lp_stay = Qstem[prevs, i] - logsumexp(Qstem[:, i])
                 @views lp_go = logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i]) - logsumexp(Qstem[:, i])
+            end
+            if i > 1
+                Qstem_pre_update_post_bias[mod1(prevs + 1, 3), i-1] += spatial_bias[prevs] + turn_bias
             end
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
                 ll = lp_stay
@@ -264,6 +279,12 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             Qstem1 = Qstem[1, :],
             Qstem2 = Qstem[2, :],
             Qstem3 = Qstem[3, :],
+            Qstem1_nobias = Qstem_nobias[1, :],
+            Qstem2_nobias = Qstem_nobias[2, :],
+            Qstem3_nobias = Qstem_nobias[3, :],
+            Qstem1_pre_update_post_bias = Qstem_pre_update_post_bias[1, :],
+            Qstem2_pre_update_post_bias = Qstem_pre_update_post_bias[2, :],
+            Qstem3_pre_update_post_bias = Qstem_pre_update_post_bias[3, :],
             Qleaf1 = Qleaf[1, :],
             Qleaf2 = Qleaf[2, :],
             stem_stay_p = stem_stay_p,
