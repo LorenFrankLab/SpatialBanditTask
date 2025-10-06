@@ -147,9 +147,8 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             Qstem_nobias[prevs, i] = βstay * ((1.0 - γ2) * Qdep[prevs,3-prevl,i] + γ2 * Qdep[prevs,prevl,i])
             Qstem_pre_update_post_bias[prevs, i] = Qstem_nobias[prevs, i]
             Qstem[prevs, i] = Qstem_nobias[prevs, i] + stay_bias
-            if i > 1
-                Qstem_pre_update_post_bias[prevs, i] += stay_bias
-            end
+            # Bias relative to current trial instead of last
+            Qstem_pre_update_post_bias[c1[i], i] += stay_bias
             # @views Qstem[:, i] .*= βgo
             # spatial bias
             # 1 -> 2, 2->3, 3->1
@@ -165,9 +164,7 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
                 @views lp_stay = Qstem[prevs, i] - logsumexp(Qstem[:, i])
                 @views lp_go = logsumexp(Qstem[[mod1(prevs + 1, 3), mod1(prevs + 2, 3)], i]) - logsumexp(Qstem[:, i])
             end
-            if i > 1
-                Qstem_pre_update_post_bias[mod1(prevs + 1, 3), i-1] += spatial_bias[prevs] + turn_bias
-            end
+            Qstem_pre_update_post_bias[mod1(c1[i] + 1, 3), i] += spatial_bias[prevs] + turn_bias
             if prevs == c1[i]  # If a stay trial, just the stay/go likelihood
                 ll = lp_stay
             else  # If a go trial, p(go) times the left/right turn choice
