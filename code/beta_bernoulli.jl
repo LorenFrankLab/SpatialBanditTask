@@ -227,11 +227,10 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             @views Q[:, :, i+1] .-= 0.5
         end
 
-        if (prevs == c1[i])
-            depletion[c1[i], c2[i]] *= depletion_factor
-        else
+        if (prevs !== c1[i])
             depletion .= 1
         end
+        depletion[c1[i], c2[i]] *= depletion_factor
 
         prevs = c1[i]
         prevl = c2[i]
