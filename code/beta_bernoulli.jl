@@ -113,7 +113,7 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
         @views Q[:, :, 1] .-= 0.5
     end
 
-    depletion = ones(U,3,2)
+    depletion = ones(U,3,2,length(c1)+1)
 
     for i in eachindex(c1)
         if ((i>1) && (data.daysessionnum[i] != data.daysessionnum[i-1]))
@@ -126,14 +126,14 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             end
             prevs = 0
             prevl = 0
-            depletion .= 1
+            @views depletion[:, :, i] .= 1
         end
 
         # this is the (scaled) value of switching to each alternative stem
         # mean averages over both leaves
         # 
         # Seems to be faster breaking it up into the three calculations
-        @views Qdep[:, :, i] .= Q[:, :, i] .* depletion
+        @views Qdep[:, :, i] .= Q[:, :, i] .* depletion[:, :, i]
         @views Qstem_nobias[1, i] = mean(Qdep[1, :, i]) * βgo
         @views Qstem_nobias[2, i] = mean(Qdep[2, :, i]) * βgo
         @views Qstem_nobias[3, i] = mean(Qdep[3, :, i]) * βgo
@@ -216,7 +216,7 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             betadist_α[c1[i], c2[i], i+1] += 1
         else
             mu = betadist_α[c1[i], c2[i], i] / (betadist_α[c1[i], c2[i], i] + betadist_β[c1[i], c2[i], i])
-            d = depletion[c1[i], c2[i]]
+            d = depletion[c1[i], c2[i], i]
             target = mu*(1-d)/(1-d*mu)
             betadist_β[c1[i], c2[i], i+1] += d*(1-target)
         end
@@ -227,10 +227,11 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             @views Q[:, :, i+1] .-= 0.5
         end
 
+        @views depletion[:, :, i+1] .= depletion[:, :, i]
         if (prevs == c1[i])
-            depletion[c1[i], c2[i]] *= depletion_factor
+            depletion[c1[i], c2[i], i+1] *= depletion_factor
         else
-            depletion .= 1
+            depletion[:, :, i+1] .= 1
         end
 
         prevs = c1[i]
@@ -292,6 +293,15 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
             stem_3_p = stem_3_p,
             leaf_1_p = leaf_1_p,
             leaf_2_p = leaf_2_p,
+            depletion_leaf_1 = depletion[1, 1, 1:length(c1)],
+            depletion_leaf_2 = depletion[1, 2, 1:length(c1)],
+            depletion_leaf_3 = depletion[2, 1, 1:length(c1)],
+            depletion_leaf_4 = depletion[2, 2, 1:length(c1)],
+            depletion_leaf_5 = depletion[3, 1, 1:length(c1)],
+            depletion_leaf_6 = depletion[3, 2, 1:length(c1)],
+            depletion_mean_stem_1 = mean(depletion[1, :, 1:length(c1)]; dims=1)[1, :],
+            depletion_mean_stem_2 = mean(depletion[2, :, 1:length(c1)]; dims=1)[1, :],
+            depletion_mean_stem_3 = mean(depletion[3, :, 1:length(c1)]; dims=1)[1, :],
         )
         record_df[!, :stem_choice_p] .= 0.0
         record_df[!, :leaf_choice_p] .= 0.0
