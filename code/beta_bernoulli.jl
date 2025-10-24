@@ -53,6 +53,8 @@ Parameters:
     leaf_turn_bias - bias toward left leaf choice
     leaf_spatial_bias - vector of length 3, bias for each stem's left leaf
     beta_decay - decay rate for beta distribution
+    a_baseline - baseline value for α (for initialization and decay)
+    b_baseline - baseline value for β (for initialization and decay)
     γ2 - weighting for leaf value when staying on same stem
     depletion_factor - factor by which reward depletes on repeated choices
     retain_belief - fraction of belief retained across sessions
@@ -61,7 +63,7 @@ Parameters:
     add_leaf - if true, include leaf choice in likelihood
     record - if true, return a DataFrame with trial-by-trial variables
 """
-function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
+function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias::Bool, rewscaled::Bool, add_leaf::Bool, record::Bool) where {V, W}
     U = promote_type(eltype(βstay), eltype(stay_bias))  # this is a bit of a hack so that we can optionally have either of these fixed at 0
     # mode = "likelihood"
 
@@ -91,8 +93,8 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
     # Beta dist variables
     betadist_α = zeros(U, 3, 2, length(c1)+1)
     betadist_β = zeros(U, 3, 2, length(c1)+1)
-    betadist_α[:, :, 1] .= 1.0
-    betadist_β[:, :, 1] .= 1.0
+    betadist_α[:, :, 1] .= a_baseline
+    betadist_β[:, :, 1] .= b_baseline
 
     # Q-values
     # Choice-level representation
@@ -208,8 +210,8 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
         @views betadist_β[:, :, i+1] .= betadist_β[:, :, i]
 
         # Decay existing estimates
-        betadist_α[:, :, i+1] .= (betadist_α[:, :, i+1] .- 1) .* (1.0 - beta_decay * 0.5) .+ 1
-        betadist_β[:, :, i+1] .= (betadist_β[:, :, i+1] .- 1) .* (1.0 - beta_decay * 0.5) .+ 1
+        betadist_α[:, :, i+1] .= (betadist_α[:, :, i+1] .- a_baseline) .* (1.0 - beta_decay * 0.5) .+ a_baseline
+        betadist_β[:, :, i+1] .= (betadist_β[:, :, i+1] .- b_baseline) .* (1.0 - beta_decay * 0.5) .+ b_baseline
 
         # learn about the chosen leaf
         if r[i] == 1.0
@@ -346,8 +348,8 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
     # end
 end
 
-function beta_lik(data; βgo=0.0, βstay=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], beta_decay=0.0, γ2=0.0, depletion_factor=1.0, retain_belief=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
-    beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
+function beta_lik(data; βgo=0.0, βstay=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], beta_decay=0.0, a_baseline=1.0, b_baseline=1.0, γ2=0.0, depletion_factor=1.0, retain_belief=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+    beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
 """
@@ -375,6 +377,12 @@ function beta_lik(data, results::T; subject=0, params=nothing, delay_turn_bias=f
     end
     if haskey(d, :beta_decay)
         d[:beta_decay] = unitnorm(d[:beta_decay])
+    end
+    if haskey(d, :a_baseline)
+        d[:a_baseline] = exp(d[:a_baseline])
+    end
+    if haskey(d, :b_baseline)
+        d[:b_baseline] = exp(d[:b_baseline])
     end
     if haskey(d, :γ2)
         d[:γ2] = unitnorm(d[:γ2])
@@ -429,6 +437,8 @@ add_spatial_bias - include spatial bias parameters  (3 parameters)
 add_leaf_turn_bias - include leaf turn bias parameter
 add_leaf_spatial_bias - include leaf spatial bias parameters (3 parameters)
 add_beta_decay - include beta decay parameter
+add_a_baseline - include a_baseline parameter
+add_b_baseline - include b_baseline parameter
 add_γ2 - include γ2 parameter
 add_depletion_factor - include depletion factor parameter
 add_retain_belief - include retain belief parameter
@@ -447,6 +457,8 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
     add_leaf_turn_bias=false,
     add_leaf_spatial_bias=false,
     add_beta_decay=false,
+    add_a_baseline=false,
+    add_b_baseline=false,
     add_γ2=false,
     add_depletion_factor=false,
     add_retain_belief=false,
@@ -465,6 +477,8 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
     @show add_leaf_turn_bias
     @show add_leaf_spatial_bias
     @show add_beta_decay
+    @show add_a_baseline
+    @show add_b_baseline
     @show add_γ2
     @show add_depletion_factor
     @show add_retain_belief
@@ -527,6 +541,16 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
         initbetas = hcat(initbetas, 0)
         push!(initsigma, 1)
         push!(varnames, "beta_decay")
+    end
+    if add_a_baseline
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "a_baseline")
+    end
+    if add_b_baseline
+        initbetas = hcat(initbetas, 0)
+        push!(initsigma, 1)
+        push!(varnames, "b_baseline")
     end
     if add_γ2
         initbetas = hcat(initbetas, 0)
@@ -612,6 +636,20 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
             beta_decay = 0.0
         end
 
+        if add_a_baseline
+            a_baseline = exp(params[i])
+            i += 1
+        else
+            a_baseline = 1.0
+        end
+
+        if add_b_baseline
+            b_baseline = exp(params[i])
+            i += 1
+        else
+            b_baseline = 1.0
+        end
+
         if add_γ2
             γ2 = unitnorm(params[i])
             i += 1
@@ -635,7 +673,7 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
 
         i += 1
 
-        return beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
+        return beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     em_opt_extended(data,subs,X,initbetas,initsigma,fn,varnames; emtol, maxiter, full, extended, quiet, startx=nothing)
