@@ -120,8 +120,8 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
     for i in eachindex(c1)
         if ((i>1) && (data.daysessionnum[i] != data.daysessionnum[i-1]))
             # If retain_belief > 0, carry over some of the previous belief
-            betadist_α[:, :, i] .= (1 - retain_belief) * 1.0 .+ retain_belief * betadist_α[:, :, i-1]
-            betadist_β[:, :, i] .= (1 - retain_belief) * 1.0 .+ retain_belief * betadist_β[:, :, i-1]
+            betadist_α[:, :, i] .= (1 - retain_belief) * a_baseline .+ retain_belief * betadist_α[:, :, i-1]
+            betadist_β[:, :, i] .= (1 - retain_belief) * b_baseline .+ retain_belief * betadist_β[:, :, i-1]
             @views Q[:, :, i] .= betadist_α[:, :, i] ./ (betadist_α[:, :, i] + betadist_β[:, :, i])
             if rewscaled
                 @views Q[:, :, i] .-= 0.5
