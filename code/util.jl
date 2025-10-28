@@ -87,7 +87,7 @@ function load_animal(animal, filepath; depletion=false)
     end
     df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
 
-    annotate_data!(df)
+    annotate_data!(df; depletion)
     return df
 end
 
@@ -100,7 +100,7 @@ function load_animal_dj(animal, filepath)
     return df
 end
 
-function annotate_data!(df)
+function annotate_data!(df; depletion=false)
     # recode some variables
     df.rewscaled = 2 * df.reward .- 1
     df.stemchoice = [df[i,:stem][1] - 'A' + 1 for i in 1:nrow(df)]
