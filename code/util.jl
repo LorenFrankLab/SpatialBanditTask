@@ -1,5 +1,6 @@
 using DataFrames
 using CSV
+using SpecialFunctions
 
 # Including this to fix an issue with Julia 1.6
 @static if (VERSION <= v"1.6")
@@ -34,8 +35,22 @@ animals = [
     "wilbur",
 ]
 
+# Old version separated trials by zeros
+# Works for base but not depletion condition
 function cont_combination_old(s)
     parse.(Int, split(s, "0"; keepempty=false)) ./ 10
+end
+
+# New version assumes strings are properly padded to 12 characters
+function cont_combination_new(s)
+    [
+        parse(Int, s[1:2]),
+        parse(Int, s[3:4]),
+        parse(Int, s[5:6]),
+        parse(Int, s[7:8]),
+        parse(Int, s[9:10]),
+        parse(Int, s[11:12]),
+    ] ./ 10
 end
 
 """
@@ -62,15 +77,30 @@ Return a dataframe for the animal
 function load_animal(animal, filepath; depletion=false)
     # csv_file to estimate value for
     if depletion
-        csv_file = animal * "_clean_contingencies_only_parsed_depletion_data.csv"
+        csv_file = animal * "_decay_default_original_csv_format.csv"
+        fullpath = joinpath(filepath, "data/new", csv_file)
         # mkdir(fullfile(filepath,["hmm_decay_",animal]))
     else
         csv_file = animal * "_clean_contingencies_only_parsed_data.csv"
+        fullpath = joinpath(filepath, "data", csv_file)
         # mkdir(fullfile(filepath,['hmm_',animal]))
     end
-    fullpath = joinpath(filepath, "data", csv_file)
     df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
 
+    annotate_data!(df)
+    return df
+end
+
+"""
+Version for remote format
+"""
+function load_animal_dj(animal, filepath)
+    df = DataFrame(CSV.File(filepath, drop=[1]))  # Use filepath instead of fullpath, drop index column
+    annotate_data!(df)
+    return df
+end
+
+function annotate_data!(df)
     # recode some variables
     df.rewscaled = 2 * df.reward .- 1
     df.stemchoice = [df[i,:stem][1] - 'A' + 1 for i in 1:nrow(df)]
@@ -147,8 +177,39 @@ function load_animal(animal, filepath; depletion=false)
         prev_session = session
     end
 
-    df.cont_combo = cont_combination_old.(string.(df.contingency))
+    # Old method of separating contingencies by zeros
+    # df.cont_combo_old = cont_combination_old.(string.(df.contingency))
     df.contingency = string.(df.contingency)
+
+    # A few contingencies are truncated if they have a leading 0
+    # Pad them out
+    short_contingencies = findall(length.(df.contingency) .== 9)
+    for i in short_contingencies
+        df.contingency[i] = "0$(df.contingency[i])"
+    end
+    short_contingencies = findall(length.(df.contingency) .== 10)
+    for i in short_contingencies
+        df.contingency[i] = "0$(df.contingency[i])"
+    end
+    short_contingencies = findall(length.(df.contingency) .== 11)
+    for i in short_contingencies
+        df.contingency[i] = "0$(df.contingency[i])"
+    end
+    df.cont_combo = cont_combination_new.(df.contingency)
+
+    # For depletion data, we may want to label the true (underlying) contingencies
+    if depletion
+        # Fix contingencies
+        firstrows = combine(first, groupby(df, :daysessionnum))
+        firstrows.contingency_base .= firstrows.contingency
+        # Merge
+        x = leftjoin(df[:, [:daysessionnum, :contingency]], firstrows[: ,[:daysessionnum, :contingency_base]], on=:daysessionnum)
+        # Get rid of union type with null?
+        df.contingency_base .= String.(x.contingency_base)
+    else
+        df.contingency_base .= df.contingency
+    end
+    df.cont_base_combo = cont_combination_new.(df.contingency_base)
 
     return df
 end
@@ -194,6 +255,25 @@ function load_allanimals_combined(filepath)
         dep.daysessionnum_cond .= dep.daysessionnum
         dep.daysessionnum .+= maximum(combined.daysessionnum)
         dep.depletion .= true
+        combined = vcat(combined, dep)
+    end
+    return combined
+end
+
+function load_allanimals_depletion(filepath)
+    animal = animals[1]
+    dep = load_animal(animal, filepath, depletion=true)
+    dep.depletion .= true
+    dep.animal .= animal
+    dep.daysessionnum_cond .= dep.daysessionnum
+    combined = dep
+    for animal in animals[2:end]
+        dep = load_animal(animal, filepath, depletion=true)
+        dep.depletion .= true
+        dep.animal .= animal
+        dep.daysessionnum_cond .= dep.daysessionnum
+        dep.daynum .+= maximum(combined.daynum)
+        dep.daysessionnum .+= maximum(combined.daysessionnum)
         combined = vcat(combined, dep)
     end
     return combined
