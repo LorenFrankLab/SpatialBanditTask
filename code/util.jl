@@ -98,9 +98,14 @@ end
 """
 Version for remote format
 """
-function load_animal_dj(animal, filepath)
+function load_animal_dj(animal, filepath; depletion)
     df = DataFrame(CSV.File(filepath, drop=[1]))  # Use filepath instead of fullpath, drop index column
-    annotate_data!(df)
+
+    if animal == "senor"
+        df.date = parse.(Int, [x[6:end] for x in df.date])
+    end
+
+    annotate_data!(df; depletion)
     return df
 end
 
