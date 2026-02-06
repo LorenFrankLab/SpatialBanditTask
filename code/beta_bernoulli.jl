@@ -348,7 +348,52 @@ function beta_lik(data, βgo, βstay::V, βleaf, stay_bias::W, turn_bias, spatia
     # end
 end
 
-function beta_lik(data; βgo=0.0, βstay=0.0, βleaf=0.0, stay_bias=0.0, turn_bias=0.0, spatial_bias=[0.0, 0.0, 0.0], leaf_turn_bias=0.0, leaf_spatial_bias=[0.0, 0.0, 0.0], beta_decay=0.0, a_baseline=1.0, b_baseline=1.0, γ2=0.0, depletion_factor=1.0, retain_belief=0.0, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false)
+beta_defaults = Dict{Symbol, Any}(
+    :βgo => 0.0,
+    :βstay => 0.0,
+    :βleaf => 0.0,
+    :stay_bias => 0.0,
+    :turn_bias => 0.0,
+    :spatial_bias => [0.0, 0.0, 0.0],
+    :leaf_turn_bias => 0.0,
+    :leaf_spatial_bias => [0.0, 0.0, 0.0],
+    :beta_decay => 0.0,
+    :a_baseline => 1.0,
+    :b_baseline => 1.0,
+    :γ2 => 0.0,
+    :depletion_factor => 1.0,
+    :retain_belief => 0.0,
+    :delay_turn_bias => false,
+    :rewscaled => false,
+    :add_leaf => true,
+    :record => false,
+)
+
+function beta_lik(data; kwargs...)
+    d = Dict{Symbol, Any}(kwargs)
+    for (k, v) in beta_defaults
+        if !haskey(d, k)
+            d[k] = v
+        end
+    end
+    βgo = d[:βgo]
+    βstay = d[:βstay]
+    βleaf = d[:βleaf]
+    stay_bias = d[:stay_bias]
+    turn_bias = d[:turn_bias]
+    spatial_bias = d[:spatial_bias]
+    leaf_turn_bias = d[:leaf_turn_bias]
+    leaf_spatial_bias = d[:leaf_spatial_bias]
+    beta_decay = d[:beta_decay]
+    a_baseline = d[:a_baseline]
+    b_baseline = d[:b_baseline]
+    γ2 = d[:γ2]
+    depletion_factor = d[:depletion_factor]
+    retain_belief = d[:retain_belief]
+    delay_turn_bias = d[:delay_turn_bias]
+    rewscaled = d[:rewscaled]
+    add_leaf = d[:add_leaf]
+    record = d[:record]
     beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, record)
 end
 
@@ -364,6 +409,10 @@ Otherwise use group-level betas
 """
 function beta_lik(data, results::T; subject=0, params=nothing, delay_turn_bias=false, rewscaled=false, add_leaf=true, record=false) where T <: EMResultsAbstract
     d = Dict{Symbol, Any}()
+    d[:delay_turn_bias] = delay_turn_bias
+    d[:rewscaled] = rewscaled
+    d[:add_leaf] = add_leaf
+    d[:record] = record
     # The trick here is that we can pass in a dictionary of (symbol => value) as kwargs
     # Then everything not present the EMResults struct is left at its default value
     if subject == 0
@@ -412,7 +461,7 @@ function beta_lik(data, results::T; subject=0, params=nothing, delay_turn_bias=f
             d[k] = v
         end
     end
-    beta_lik(data; delay_turn_bias, rewscaled, add_leaf, record, d...)
+    beta_lik(data; d...)
 end
 
 
@@ -466,6 +515,7 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
     rewscaled=false,
     add_leaf=true,
     subjlevel=:daynum,
+    default_params=nothing,  # Overrides of default parameters
     )
 
     @show add_βgo
@@ -576,104 +626,134 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
         if add_βgo
             βgo = params[i] # beta for go choice
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :βgo)
+            βgo = default_params[:βgo]
         else
-            βgo = 0.0
+            βgo = beta_defaults[:βgo]
         end
 
         if add_βstay
             βstay = params[i] # beta for stay choice
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :βstay)
+            βstay = default_params[:βstay]
         else
-            βstay = 0.0
+            βstay = beta_defaults[:βstay]
         end
 
         if add_βleaf
             βleaf = params[i] # beta for leaf choice on switch
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :βleaf)
+            βleaf = default_params[:βleaf]
         else
-            βleaf = 0.0
+            βleaf = beta_defaults[:βleaf]
         end
 
         if add_stay_bias
             stay_bias = params[i] # beta for leaf choice on switch
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :stay_bias)
+            stay_bias = default_params[:stay_bias]
         else
-            stay_bias = 0.0
+            stay_bias = beta_defaults[:stay_bias]
         end
 
         if add_turn_bias
             turn_bias = params[i] # beta for leaf choice on switch
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :turn_bias)
+            turn_bias = default_params[:turn_bias]
         else
-            turn_bias = 0.0
+            turn_bias = beta_defaults[:turn_bias]
         end
 
         if add_spatial_bias
             spatial_bias = params[i:i+2] # beta for leaf choice on switch
             i += 3
+        elseif !isnothing(default_params) && haskey(default_params, :spatial_bias)
+            spatial_bias = default_params[:spatial_bias]
         else
-            spatial_bias = [0.0, 0.0, 0.0]
+            spatial_bias = beta_defaults[:spatial_bias]
         end
 
         if add_leaf_turn_bias
             leaf_turn_bias = params[i] # beta for leaf choice on switch
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :leaf_turn_bias)
+            leaf_turn_bias = default_params[:leaf_turn_bias]
         else
-            leaf_turn_bias = 0.0
+            leaf_turn_bias = beta_defaults[:leaf_turn_bias]
         end
 
         if add_leaf_spatial_bias
             leaf_spatial_bias = params[i:i+2] # beta for leaf choice on switch
             i += 3
+        elseif !isnothing(default_params) && haskey(default_params, :leaf_spatial_bias)
+            leaf_spatial_bias = default_params[:leaf_spatial_bias]
         else
-            leaf_spatial_bias = [0.0, 0.0, 0.0]
+            leaf_spatial_bias = beta_defaults[:leaf_spatial_bias]
         end
 
         if add_beta_decay
-            beta_decay = unitnorm(params[i])
+            f_beta_decay = unitnorm(params[i])
             i += 1
+        elseif !isnothing(beta_decay)
+            f_beta_decay = beta_decay
+        elseif !isnothing(default_params) && haskey(default_params, :beta_decay)
+            f_beta_decay = default_params[:beta_decay]
         else
-            beta_decay = 0.0
+            f_beta_decay = beta_defaults[:beta_decay]
         end
 
         if add_a_baseline
             a_baseline = exp(params[i])
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :a_baseline)
+            a_baseline = default_params[:a_baseline]
         else
-            a_baseline = 1.0
+            a_baseline = beta_defaults[:a_baseline]
         end
 
         if add_b_baseline
             b_baseline = exp(params[i])
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :b_baseline)
+            b_baseline = default_params[:b_baseline]
         else
-            b_baseline = 1.0
+            b_baseline = beta_defaults[:b_baseline]
         end
 
         if add_γ2
             γ2 = unitnorm(params[i])
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :γ2)
+            γ2 = default_params[:γ2]
         else
-            γ2 = 0.0
+            γ2 = beta_defaults[:γ2]
         end
 
         if add_depletion_factor
             depletion_factor = unitnorm(params[i])
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :depletion_factor)
+            depletion_factor = default_params[:depletion_factor]
         else
-            depletion_factor = 1.0
+            depletion_factor = beta_defaults[:depletion_factor]
         end
 
         if add_retain_belief
             retain_belief = unitnorm(params[i])
             i += 1
+        elseif !isnothing(default_params) && haskey(default_params, :retain_belief)
+            retain_belief = default_params[:retain_belief]
         else
-            retain_belief = 0.0
+            retain_belief = beta_defaults[:retain_belief]
         end
 
         i += 1
 
-        return beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
+        return beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, f_beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
     em_opt_extended(data,subs,X,initbetas,initsigma,fn,varnames; emtol, maxiter, full, extended, quiet, startx=nothing)
