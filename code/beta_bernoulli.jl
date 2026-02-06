@@ -516,6 +516,8 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
     add_leaf=true,
     subjlevel=:daynum,
     default_params=nothing,  # Overrides of default parameters
+    loocv_data=nothing,
+    loocv_subject=nothing,
     )
 
     @show add_βgo
@@ -536,6 +538,9 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
     @show rewscaled
     @show add_leaf
     @show subjlevel
+    @show default_params
+    @show loocv_data
+    @show loocv_subject
 
     data = copy(df)
     data[:, :sub] = data[:, subjlevel]
@@ -756,7 +761,16 @@ function run_beta_lik(df; maxiter=100, emtol=1e-3, full=true, extended=false, qu
         return beta_lik(data, βgo, βstay, βleaf, stay_bias, turn_bias, spatial_bias, leaf_turn_bias, leaf_spatial_bias, f_beta_decay, a_baseline, b_baseline, γ2, depletion_factor, retain_belief, delay_turn_bias, rewscaled, add_leaf, false)
     end
 
-    em_opt_extended(data,subs,X,initbetas,initsigma,fn,varnames; emtol, maxiter, full, extended, quiet, startx=nothing)
+    if !isnothing(loocv_data)
+        if !isnothing(loocv_subject)
+            return loocv_singlesubject(data,subs,loocv_subject,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
+        else
+            return loocv(data,subs,loocv_data.x,X,loocv_data.betas,loocv_data.sigma,fn; emtol, full, maxiter)
+        end
+    else
+        em_opt_extended(data,subs,X,initbetas,initsigma,fn,varnames; emtol, maxiter, full, extended, quiet, startx=nothing)
+    end
+
 end
 
 """ Compute trial-by-trial Q values and other variables from fitted beta-bernoulli model
