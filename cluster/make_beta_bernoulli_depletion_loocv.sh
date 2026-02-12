@@ -38,7 +38,7 @@ cat << EOF > $LOCAL_RUN_NAME
 #!/bin/bash
 
 for i in {1..$N_CONDS}; do
-    julia ${STUDY_NAME}.jl \$i true
+    JULIA_NUM_THREADS=$N_CORES julia ${STUDY_NAME}.jl \$i true
 done 
 EOF
 chmod u+x $LOCAL_RUN_NAME
