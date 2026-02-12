@@ -117,7 +117,9 @@ function annotate_data!(df; depletion=false)
 
     # Number days 1-n
     dates = unique(df.date)
-    df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
+    daymap = Dict(d => i for (i, d) in enumerate(dates))
+    df.daynum = [daymap[d] for d in df.date]
+    # df.daynum = [minimum(findall(df[i,:date] .== dates)) for i in 1:nrow(df)]
 
     # Code sessions contiguously across days
     datesessions = string.(df.date) .* "_" .* string.(df.session)
