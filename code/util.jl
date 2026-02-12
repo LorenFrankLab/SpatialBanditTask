@@ -87,8 +87,10 @@ function load_animal(animal, filepath; depletion=false)
     end
     df = DataFrame(CSV.File(fullpath, drop=[1]))  # Drop index column
 
-    if animal == "senor"
-        df.date = parse.(Int, [x[6:end] for x in df.date])
+    if depletion
+        if animal == "senor"
+            df.date = parse.(Int, [x[6:end] for x in df.date])
+        end
     end
 
     annotate_data!(df; depletion)
