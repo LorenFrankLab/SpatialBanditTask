@@ -5,6 +5,9 @@
 - /notebooks_metalearning: analysis for metalearning paper
 - /results: model results
 
+## Requirements:
+Julia 1.10 or higher
+
 ## Getting Started:
 
 Clone the repo:
