@@ -6,7 +6,8 @@
 - /results: model results
 
 ## Requirements:
-Julia 1.10 or higher
+Julia 1.10 or higher.
+Tested on MacOS Tahoe. Expected to work on any Linux distribution, macOS, or Windows with Julia 1.10+.
 
 ## Getting Started:
 
